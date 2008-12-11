@@ -45,59 +45,46 @@ sub new {
         $class
     );
     my $inBlock = 0;
+    my @fields;
 
     # | *Current state* | *Action* | *Next state* | *Allowed* |
     foreach ( split( /\n/, $text ) ) {
-        if (
-/^\s*\|[\s*]*State[\s*]*\|[\s*]*Action[\s*]*\|[\s*]*Next State[\s*]*\|[\s*]*Allowed[\s*]*\|[\s*]*Form[\s*]*\|$/i
-          )
-        {
+        if ( /^\s*\|[\s*]*State[\s*]*\|[\s*]*Action[\s*]*\|.*\|$/i ) {
+
+            @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
+            shift @fields;
 
             # from now on, we are in the TRANSITION table
             $inBlock = 1;
         }
-        elsif (
-/^\s*\|[\s*]*State[\s*]*\|[\s*]*Allow Edit[\s*]*\|[\s*]*Message[\s*]*\|$/i
-          )
-        {
+        elsif ( /^\s*\|[\s*]*State[\s*]*\|[\s*]*Allow Edit[\s*]*\|.*\|$/i ) {
+
+            @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
+            shift @fields;
 
             # from now on, we are in the STATE table
             $inBlock = 2;
 
         }
-        elsif (/^(?:\t|   )+\*\sSet\s([A-Za-z]+)\s\=\s*(.*)$/) {
+        elsif (/^(?:\t|   )+\*\sSet\s(\w+)\s=\s*(.*)$/) {
 
             # store preferences
             $this->{preferences}->{$1} = $2;
         }
-        elsif ( $inBlock == 1 && s/^\s*\|//o ) {
+        elsif ( $inBlock == 1 && s/^\s*\|\s*// ) {
 
             # read row in TRANSITION table
-            my ( $state, $action, $next, $allowed, $form ) =
-              split(/\s*\|\s*/);
-            $state = _cleanField($state);
-            push(
-                @{ $this->{transitions} },
-                {
-                    state   => $state,
-                    action  => $action,
-                    next    => $next,
-                    allowed => $allowed,
-                    form    => $form
-                }
-            );
+            my %data;
+            @data{@fields} = split(/\s*\|\s*/);
+            push( @{ $this->{transitions} }, \%data );
         }
-        elsif ( $inBlock == 2 && s/^\s*\|//o ) {
+        elsif ( $inBlock == 2 && s/^\s*\|\s*//o ) {
 
             # read row in STATE table
-            my ( $state, $allowedit, $message ) = split(/\s*\|\s*/);
-            $state = _cleanField($state);
-            $this->{defaultState} ||= $state;
-            $this->{states}->{$state} = {
-                name      => $state,
-                allowedit => $allowedit,
-                message   => $message
-            };
+            my %data;
+            @data{@fields} = split(/\s*\|\s*/);
+            $this->{defaultState} ||= $data{state};
+            $this->{states}->{$data{state}} = \%data;
         }
         else {
             $inBlock = 0;
@@ -130,7 +117,7 @@ sub getNextState {
             && $_->{action} eq $action
             && _isAllowed( $_->{allowed} ) )
         {
-            return $_->{next};
+            return $_->{nextstate};
         }
     }
     return undef;
@@ -148,6 +135,23 @@ sub getNextForm {
             && _isAllowed( $_->{allowed} ) )
         {
             return $_->{form};
+        }
+    }
+    return undef;
+}
+
+# Get the notify column defined for the given current state and action
+# (the first 2 columns of the transition table). The returned list
+# will be undef if the transition doesn't exist, or is not allowed.
+sub getNotifyList {
+    my ( $this, $currentState, $action ) = @_;
+
+    foreach ( @{ $this->{transitions} } ) {
+        if (   $_->{state} eq $currentState
+            && $_->{action} eq $action
+            && _isAllowed( $_->{allowed} ) )
+        {
+            return $_->{notify};
         }
     }
     return undef;
@@ -228,9 +232,7 @@ sub _isAllowed {
 sub _cleanField {
     my ($text) = @_;
     $text ||= '';
-    $text =~ s/^\s*//go;
-    $text =~ s/\s*$//go;
-    $text =~ s/[^A-Za-z0-9_.]//go;    # Need do for web.topic
+    $text =~ s/[^\w.]//gi;
     return $text;
 }
 
@@ -243,13 +245,13 @@ sub stringify {
     }
     $s .= "\n---+ States\n| *State*       | *Allow Edit* | *Message* |\n";
     foreach ( values %{ $this->{states} } ) {
-        $s .= "| $_->{name} | $_->{allowedit} | $_->{message} |\n";
+        $s .= "| $_->{state} | $_->{allowedit} | $_->{message} |\n";
     }
 
     $s .=
       "\n---+ Transitions\n| *State* | *Action* | *Next State* | *Allowed* |\n";
     foreach ( @{ $this->{transitions} } ) {
-        $s .= "| $_->{state} | $_->{action} | $_->{next} |$_->{allowed} |\n";
+        $s .= "| $_->{state} | $_->{action} | $_->{nextstate} |$_->{allowed} |\n";
     }
     return $s;
 }

@@ -23,6 +23,8 @@ package TWiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
+use TWiki;
+
 # Constructor
 sub new {
     my ( $class, $workflow, $web, $topic, $meta, $text ) = @_;
@@ -174,10 +176,44 @@ sub changeState {
     if ($form) {
         $this->{meta}->put( "FORM", { name => $form } );
     }                        # else leave the existing form in place
+
     TWiki::Func::saveTopic(
         $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { minor => 1 }
     );
+
+    my $notify = $this->{workflow}->getNotifyList( $cs, $action );
+    if ($notify) {
+        my @persons = split(/\s*,\s*/, $notify);
+        my @emails;
+        foreach my $who (@persons) {
+            if ($who =~ /^$TWiki::regex{emailAddrRegex}$/) {
+                push(@emails, $who);
+            } else {
+                $who =~ s/^.*\.//; # web name?
+                my @list = TWiki::Func::wikinameToEmails( $who );
+                if (scalar(@list)) {
+                    push(@emails, @list);
+                } else {
+                    die $who;
+                }
+            }
+        }
+        if (scalar(@emails)) {
+            # Have a list of recipients
+            my $text = TWiki::Func::loadTemplate( 'mailworkflowtransition' );
+            TWiki::Func::setPreferencesValue('EMAILTO', join(', ', @emails));
+            TWiki::Func::setPreferencesValue(
+                'TARGET_STATE', $this->getState());
+            $text = TWiki::Func::expandCommonVariables(
+                $text, $this->{topic}, $this->{web}, $this->{meta});
+            my $errors = TWiki::Func::sendEmail($text, 5);
+            if ($errors) {
+                TWiki::Func::writeWarning('Failed to send transition mails: '
+                                            .$errors);
+            }
+        }
+    }
 
     return undef;
 }

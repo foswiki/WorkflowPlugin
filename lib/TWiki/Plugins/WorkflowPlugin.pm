@@ -224,7 +224,7 @@ sub _WORKFLOWSTATE {
         unless ($TOPIC_STATE) {
             $TOPIC_STATE = { name => $TOPIC->getDefaultState() };
         }
-        return $TOPIC_STATE->{name};
+        return $TOPIC_STATE->{state};
     }
     else {
         return '';

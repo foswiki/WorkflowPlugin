@@ -20,3 +20,4 @@ data/Sandbox/UnderRevisionForm.txt 0640 Forms for defect workflow
 data/Sandbox/QMApprovalForm.txt 0640 Forms for approval workflow
 data/Sandbox/TMApprovalForm.txt 0640 Forms for approval workflow
 data/Sandbox/ApprovedForm.txt 0640 Forms for approval workflow
+templates/mailworkflowtransition.tmpl 0640 Mail template

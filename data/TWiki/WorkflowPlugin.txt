@@ -62,13 +62,13 @@ The first state in the table is the initial/default state.
 
 The transition table consists of four columns, as in this example:
 <verbatim>
-| *State*        | *Action* | *Next State*  | *Allowed*                        | *Form*        |
-| APPROVED       | revise   | UNDERREVISION | QualityGroup                     | ApprovedForm  |
-| UNDERREVISION  | complete | WAITINGFORQM  | QualityGroup                     | InProcessForm |
-| WAITINGFORQM   | approve  | WAITINGFORCTO | QualityManager                   |               |
-| WAITINGFORQM   | reject   | UNDERREVISION | QualityManager,QualityGroup      |               |
-| WAITINGFORCTO  | approve  | APPROVED      | TechnicalDirector                | ApprovedForm  |
-| WAITINGFORCTO  | reject   | UNDERREVISION | TechnicalDirector,QualityManager |               |
+| *State*       | *Action* | *Next State*  | *Allowed*                        |
+| APPROVED      | revise   | UNDERREVISION | QualityGroup                     |
+| UNDERREVISION | complete | WAITINGFORQM  | QualityGroup                     |
+| WAITINGFORQM  | approve  | WAITINGFORCTO | QualityManager                   |
+| WAITINGFORQM  | reject   | UNDERREVISION | QualityManager,QualityGroup      |
+| WAITINGFORCTO | approve  | APPROVED      | TechnicalDirector                |
+| WAITINGFORCTO | reject   | UNDERREVISION | TechnicalDirector,QualityManager |
 </verbatim>
 
 Each row in this table defines a transition from one state to another state:
@@ -79,15 +79,18 @@ Each row in this table defines a transition from one state to another state:
       the specified action has been performed,
 	* the *Allowed* column specifies who is allowed to perform the
       corresponding action,
-	* the _optional_ *Form* column defines a form that is attached to
+	* an _optional_ *Form* column defines a form that is attached to
       the topic in this state.
+    * an _optional_ *Notify* column specifies who should be notified when this transition fires
 
 In our example, anyone is allowed to revise the document when it is in =UNDERREVISION= state. After finishing the revision, the document can be transitioned to the =WAITINGFORQM= state by any member of the !QualityGroup. It must then be approved by the !QualityManager, and after that by the !TechnicalDirector. Even though they can't edit the document themselves (see state table above), they _can_ reject the revision and put the document back into the =UNDERREVISION= state. The !TechnicalDirector can transition the document to =APPROVED= state where it rests until a member of the !QualityGroup puts it under revision again.
 
-If a form name is given in the last column, this form will be attached to the topic, and the topic will put in edit mode to allow information to be provided in the form _when that state transition happens_. In the example above, a form of type Approved<nop>Form will be attached to the topic when the CTO transitions the topic into =APPROVED= state.
+If a form name is given in the *Form* column, this form will be attached to the topic, and the topic will put in edit mode to allow information to be provided in the form _when that state transition happens_. In the example above, a form of type Approved<nop>Form will be attached to the topic when the CTO transitions the topic into =APPROVED= state.
    * if there is already a form of a different type attached to the topic, then any fields that have the same name in the _new_ form will be preserved.
    * If no form is given, the existing form (if any) is left in place.
 A typical usage of the form would be to collect additional information as the topic walks through the work flow, or to make information in the form unchangeable (by setting it to a =label= field) once a given state is reached.
+
+If a *Notify* column is given, that column can contain a comma-separated list of people who are to be notified when the transition is fired. You can specify individual user wiki names, group names, and even individual email addresses.
 
 You can also define other variables starting with =WORKFLOW= in the workflow description topic. These will be expanded to their defined values in any topic that uses the workflow. For example:
 	* Set WORKFLOWNOTICE = This topic is under document control.
@@ -133,9 +136,10 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 ---++ Plugin Info
 
-|  Plugin Author(s): | Thomas Hartkens, Thomas Weigert |
-|  Plugin Version: | %DATE% |
+|  Author(s): | TWiki:Main.ThomasHartkens, TWiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
+|  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  11 Dev 2008: | Crawford Currie: Foswikibug:Item8029: support notification of a list of people on state changes |
 |  15 Nov 2008 | Crawford Currie: Foswikibug:Item6114: Fixed format of history Foswikibug:Item6119: added InProcessForm and increased defensiveness in a couple of places |
 |  10 Nov 2008 | Crawford Currie: Heavily refactored to OO style to ease maintenance. TWikibug:Item6063: ensure form is saved when state changes TWikibug:Item5585: support use of ' TWikibug:Item4188: split off VarWORKFLOW documentation. TWikibug:Item5371: removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
 |  23 Apr 2008: | Crawford Currie: TWikibug:Item5369: removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
@@ -152,9 +156,8 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  16 Feb 2005: | Initial version of !ApprovalPlugin |
 |  05 Feb 2004: | Initial version of !WorkFlowAddOn |
 |  Plugin Home: | Foswiki:Extensions/%TOPIC% |
-|  Plugin Development: | Foswiki:Extensions/%TOPIC%Dev |
 
-<!-- Do _not_ attempt to edit this topic; it is auto-generated. Please add comments/questions/remarks to the Dev topic instead. -->
+<!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
 
 %META:FILEATTACHMENT{name="convert.pl.txt" attr="h" autoattached="1" comment="" date="1159057355" path="convert.pl.txt" size="355" user="Main.WikiGuest" version="1"}%
 %META:FILEATTACHMENT{name="Flow.draw" attr="h" autoattached="1" comment="" date="1159056685" path="Flow.draw" size="5504" user="UnknownUser" version=""}%
