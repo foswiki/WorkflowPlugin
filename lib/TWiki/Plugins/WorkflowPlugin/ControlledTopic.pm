@@ -184,6 +184,11 @@ sub changeState {
 
     my $notify = $this->{workflow}->getNotifyList( $cs, $action );
     if ($notify) {
+        # Expand vars in the notify list. This supports picking up the
+        # value of the notifees from the topic itself.
+        $notify = TWiki::Func::expandCommonVariables(
+            $notify, $this->{web}, $this->{topic}, $this->{meta} );
+        # Dig up the bodies
         my @persons = split(/\s*,\s*/, $notify);
         my @emails;
         foreach my $who (@persons) {
