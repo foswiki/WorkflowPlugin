@@ -200,7 +200,9 @@ sub changeState {
                 if (scalar(@list)) {
                     push(@emails, @list);
                 } else {
-                    die $who;
+                    TWiki::Func::writeWarning(
+                        __PACKAGE__." cannot send mail to '$who'".
+                          " - cannot determine an email address");
                 }
             }
         }
