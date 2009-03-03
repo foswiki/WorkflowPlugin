@@ -19,11 +19,11 @@
 # defined in the workflow topic, together with the state and transition
 # tables defined therein.
 #
-package TWiki::Plugins::WorkflowPlugin::ControlledTopic;
+package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
-use TWiki;
+use Foswiki;
 
 # Constructor
 sub new {
@@ -68,7 +68,7 @@ sub setState {
     $this->{state}->{name} = $state;
     $this->{state}->{"LASTVERSION_$state"} = $version;
     $this->{state}->{"LASTTIME_$state"} =
-      TWiki::Func::formatTime( time(), undef, 'servertime' );
+      Foswiki::Func::formatTime( time(), undef, 'servertime' );
     $this->{meta}->put( "WORKFLOW", $this->{state} );
 }
 
@@ -152,18 +152,18 @@ sub changeState {
 
     $this->setState($state);
 
-    my $fmt = TWiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
+    my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
       || '<br>$state -- $date';
-    $fmt =~ s/\$wikiusername/TWiki::Func::getWikiUserName()/geo;
+    $fmt =~ s/\$wikiusername/Foswiki::Func::getWikiUserName()/geo;
     $fmt =~ s/\$state/$this->getState()/goe;
     $fmt =~ s/\$date/$this->{state}->{"LASTTIME_$state"}/geo;
-    if ( defined &TWiki::Func::decodeFormatTokens ) {
+    if ( defined &Foswiki::Func::decodeFormatTokens ) {
 
         # Compatibility note: also expands $percnt etc.
-        $fmt = TWiki::Func::decodeFormatTokens($fmt);
+        $fmt = Foswiki::Func::decodeFormatTokens($fmt);
     }
     else {
-        my $mixedAlpha = $TWiki::regex{mixedAlpha};
+        my $mixedAlpha = $Foswiki::regex{mixedAlpha};
         $fmt =~ s/\$quot/\"/go;
         $fmt =~ s/\$n/\n/go;
         $fmt =~ s/\$n\(\)/\n/go;
@@ -176,7 +176,7 @@ sub changeState {
         $this->{meta}->put( "FORM", { name => $form } );
     }                        # else leave the existing form in place
 
-    TWiki::Func::saveTopic(
+    Foswiki::Func::saveTopic(
         $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { minor => 1 }
     );
@@ -189,15 +189,15 @@ sub changeState {
         my @persons = split(/\s*,\s*/, $notify);
         my @emails;
         foreach my $who (@persons) {
-            if ($who =~ /^$TWiki::regex{emailAddrRegex}$/) {
+            if ($who =~ /^$Foswiki::regex{emailAddrRegex}$/) {
                 push(@emails, $who);
             } else {
                 $who =~ s/^.*\.//; # web name?
-                my @list = TWiki::Func::wikinameToEmails( $who );
+                my @list = Foswiki::Func::wikinameToEmails( $who );
                 if (scalar(@list)) {
                     push(@emails, @list);
                 } else {
-                    TWiki::Func::writeWarning(
+                    Foswiki::Func::writeWarning(
                         __PACKAGE__." cannot send mail to '$who'".
                           " - cannot determine an email address");
                 }
@@ -205,14 +205,14 @@ sub changeState {
         }
         if (scalar(@emails)) {
             # Have a list of recipients
-            my $text = TWiki::Func::loadTemplate( 'mailworkflowtransition' );
-            TWiki::Func::setPreferencesValue('EMAILTO', join(', ', @emails));
-            TWiki::Func::setPreferencesValue(
+            my $text = Foswiki::Func::loadTemplate( 'mailworkflowtransition' );
+            Foswiki::Func::setPreferencesValue('EMAILTO', join(', ', @emails));
+            Foswiki::Func::setPreferencesValue(
                 'TARGET_STATE', $this->getState());
             $text = $this->expandMacros($text);
-            my $errors = TWiki::Func::sendEmail($text, 5);
+            my $errors = Foswiki::Func::sendEmail($text, 5);
             if ($errors) {
-                TWiki::Func::writeWarning('Failed to send transition mails: '
+                Foswiki::Func::writeWarning('Failed to send transition mails: '
                                             .$errors);
             }
         }
@@ -223,11 +223,11 @@ sub changeState {
 
 sub expandMacros {
     my ($this, $text) = @_;
-    my $c = TWiki::Func::getContext();
+    my $c = Foswiki::Func::getContext();
     # Workaround for Item1071
     my $memory = $c->{can_render_meta};
     $c->{can_render_meta} = $this->{meta};
-    $text = TWiki::Func::expandCommonVariables(
+    $text = Foswiki::Func::expandCommonVariables(
         $text, $this->{topic}, $this->{web}, $this->{meta});
     $c->{can_render_meta} = $memory;
     return $text;

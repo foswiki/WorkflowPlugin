@@ -1,3 +1,4 @@
+%META:TOPICINFO{author="SimianApe" date="1236103929" format="1.1" version="1.3"}%
 ---++ Tags used in controlled topics
    * Set WORKFLOWNOTICE = This topic is under document control. Last approval on %WORKFLOWLASTTIME_APPROVED%: %WORKFLOWLASTVERSION_APPROVED%
    * Set WORKFLOWBUTTON =  <table border="0" cellspacing="0" cellpadding="0"> <tr><td>You are permitted to change the status of this document:</td><td>%WORKFLOWTRANSITION%</TD></tr></table>
@@ -24,15 +25,15 @@ Workflow history: %<nop>WORKFLOWHISTORY%
 
 ---++ States
 | *State*       | *Allow Edit* | *Message* |
-| UNDERREVISION |              | This document is being revised. |
+| UNDERREVISION |      no        | This document is being revised. |
 | APPROVED      | nobody       | This document has been approved for release. |
 | WAITINGFORQM  | nobody       | This document is waiting for approval by the Quality Manager. |
 | WAITINGFORCTO | nobody       | This document is waiting for approval by the CTO.|
 ---++ Transitions
 | *State*        | *Action* | *Next State*  | *Allowed* | *Form*        |
-| APPROVED       | revise   | UNDERREVISION |           | ApprovedForm  |
-| UNDERREVISION  | ready for approval | WAITINGFORQM  | | InProcessForm |
-| WAITINGFORQM   | approve  | WAITINGFORCTO |           |               |
-| WAITINGFORQM   | reject   | UNDERREVISION |           |               |
-| WAITINGFORCTO  | approve  | APPROVED      |           | ApprovedForm  |
-| WAITINGFORCTO  | reject   | UNDERREVISION |           |               |
+| APPROVED       | revise   | UNDERREVISION |    no       | ApprovedForm  |
+| UNDERREVISION  | ready for approval | WAITINGFORQM  | no | InProcessForm |
+| WAITINGFORQM   | approve  | WAITINGFORCTO |   no        |               |
+| WAITINGFORQM   | reject   | UNDERREVISION |     no      |               |
+| WAITINGFORCTO  | approve  | APPROVED      |    no       | ApprovedForm  |
+| WAITINGFORCTO  | reject   | UNDERREVISION |      no     |               |

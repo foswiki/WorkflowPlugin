@@ -19,17 +19,17 @@
 # defined in the workflow topic, together with the state and transition
 # tables defined therein.
 #
-package TWiki::Plugins::WorkflowPlugin::Workflow;
+package Foswiki::Plugins::WorkflowPlugin::Workflow;
 
 use strict;
 
 sub new {
     my ( $class, $web, $topic ) = @_;
 
-    my ( $meta, $text ) = TWiki::Func::readTopic( $web, $topic );
+    my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
     unless (
-        TWiki::Func::checkAccessPermission(
-            'VIEW', $TWiki::Plugins::SESSION->{user},
+        Foswiki::Func::checkAccessPermission(
+            'VIEW', $Foswiki::Plugins::SESSION->{user},
             $text, $topic, $web, $meta
         )
       )
@@ -198,36 +198,36 @@ sub _isAllowed {
     return 1 unless ($allow);
 
     # Always allow members of the admin group to edit
-    if ( defined &TWiki::Func::isAnAdmin ) {
+    if ( defined &Foswiki::Func::isAnAdmin ) {
 
         # Latest interface, post user objects
-        return 1 if ( TWiki::Func::isAnAdmin() );
+        return 1 if ( Foswiki::Func::isAnAdmin() );
     }
-    elsif ( ref( $TWiki::Plugins::SESSION->{user} )
-        && $TWiki::Plugins::SESSION->{user}->can("isAdmin") )
+    elsif ( ref( $Foswiki::Plugins::SESSION->{user} )
+        && $Foswiki::Plugins::SESSION->{user}->can("isAdmin") )
     {
 
         # User object
-        return 1 if ( $TWiki::Plugins::SESSION->{user}->isAdmin() );
+        return 1 if ( $Foswiki::Plugins::SESSION->{user}->isAdmin() );
     }
 
     return 0 if ( defined($allow) && $allow =~ /^\s*nobody\s*$/ );
 
-    if ( ref( $TWiki::Plugins::SESSION->{user} )
-        && $TWiki::Plugins::SESSION->{user}->can("isInList") )
+    if ( ref( $Foswiki::Plugins::SESSION->{user} )
+        && $Foswiki::Plugins::SESSION->{user}->can("isInList") )
     {
-        return $TWiki::Plugins::SESSION->{user}->isInList($allow);
+        return $Foswiki::Plugins::SESSION->{user}->isInList($allow);
     }
-    elsif ( defined &TWiki::Func::isGroup ) {
-        my $thisUser = TWiki::Func::getWikiName();
+    elsif ( defined &Foswiki::Func::isGroup ) {
+        my $thisUser = Foswiki::Func::getWikiName();
         foreach my $allowed ( split( /\s*,\s*/, $allow ) ) {
             ( my $waste, $allowed ) =
-              TWiki::Func::normalizeWebTopicName( undef, $allowed );
-            if ( TWiki::Func::isGroup($allowed) ) {
-                return 1 if TWiki::Func::isGroupMember( $allowed, $thisUser );
+              Foswiki::Func::normalizeWebTopicName( undef, $allowed );
+            if ( Foswiki::Func::isGroup($allowed) ) {
+                return 1 if Foswiki::Func::isGroupMember( $allowed, $thisUser );
             }
             else {
-                $allowed = TWiki::Func::getWikiUserName($allowed);
+                $allowed = Foswiki::Func::getWikiUserName($allowed);
                 $allowed =~ s/^.*\.//;    # strip web
                 return 1 if $thisUser eq $allowed;
             }
