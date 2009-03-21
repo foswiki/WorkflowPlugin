@@ -27,9 +27,10 @@ use strict;
 
 use Error ':try';
 
-use Foswiki::Plugins::WorkflowPlugin::Workflow;
-use Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
-use Foswiki::OopsException;
+use Foswiki::Func ();
+use Foswiki::Plugins::WorkflowPlugin::Workflow ();
+use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
+use Foswiki::OopsException ();
 
 our $VERSION          = '$Rev: 0$';
 our $RELEASE          = '21 Nov 2008';
@@ -72,8 +73,8 @@ sub _initTOPIC {
 
         ( my $wfWeb, $workflowName ) =
           Foswiki::Func::normalizeWebTopicName( $web, $workflowName );
-        my $workflow =
-          new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb, $workflowName );
+        my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
+            $workflowName );
 
         if ($workflow) {
             $TOPIC =
@@ -92,7 +93,11 @@ sub _WORKFLOWEDITTOPIC {
 
     # replace edit tag
     if ( $TOPIC->canEdit() ) {
-        return CGI::a( { href => "%EDITURL%" }, CGI::strong("Edit") );
+        return CGI::a(
+            {
+                href => Foswiki::Func::getScriptUrl(
+                    $web, $topic, 'edit', t=> time),
+            }, CGI::strong("Edit") );
     }
     else {
         return CGI::strike("Edit");
@@ -127,17 +132,19 @@ sub _WORKFLOWTRANSITION {
     my $cs              = $TOPIC->getState();
 
     unless ($numberOfActions) {
-        return CGI::span( { class => 'foswikiAlert' },
-            "NO AVAILABLE ACTIONS in state $cs" )
-          if $TOPIC->debugging();
+        return CGI::span(
+            { class => 'foswikiAlert' },
+            "NO AVAILABLE ACTIONS in state $cs"
+        ) if $TOPIC->debugging();
         return '';
     }
 
     my @fields = (
         CGI::hidden( 'WORKFLOWSTATE', $cs ),
         CGI::hidden( 'topic',         "$web.$topic" ),
+
         # Use a time field to help defeat the cache
-        CGI::hidden( 't',             time() )
+        CGI::hidden( 't', time() )
     );
 
     my $buttonClass =
@@ -175,7 +182,7 @@ sub _WORKFLOWTRANSITION {
         CGI::start_form( -method => 'POST', -action => $url )
       . join( '', @fields )
       . CGI::end_form();
-    $form =~ s/\r?\n//g; # to avoid breaking TML
+    $form =~ s/\r?\n//g;    # to avoid breaking TML
     return $form;
 }
 
@@ -204,7 +211,8 @@ sub _WORKFLOWSTATE {
 
     # SMELL: surely this should be the WORKFLOW in the target topic?
     my $prefWorkflow = Foswiki::Func::getPreferencesValue("WORKFLOW");
-    if ( $prefWorkflow && Foswiki::Func::topicExists( $theWeb, $prefWorkflow ) ) {
+    if ( $prefWorkflow && Foswiki::Func::topicExists( $theWeb, $prefWorkflow ) )
+    {
         $loadTopicState = 1;
     }
     else {
@@ -240,32 +248,35 @@ sub beforeEditHandler {
     my $query = Foswiki::Func::getCgiQuery();
     if ( !$query->param('INWORKFLOWSEQUENCE') && !$TOPIC->canEdit() ) {
         throw Foswiki::OopsException(
-            'accessdenied', status => 403,
-            def   => 'topic_access',
-            web   => $_[2],
-            topic => $_[1],
-            params =>
-              [ 'Edit topic', 'You are not permitted to edit this topic. You have been denied access by Workflow Plugin' ]
+            'accessdenied',
+            status => 403,
+            def    => 'topic_access',
+            web    => $_[2],
+            topic  => $_[1],
+            params => [
+                'Edit topic',
+'You are not permitted to edit this topic. You have been denied access by Workflow Plugin'
+            ]
         );
     }
 }
 
 sub beforeAttachmentSaveHandler {
-    my( $attrHashRef, $topic, $web ) = @_;
-print STDERR "OPEN THE BIDDING $topic $web\n";
+    my ( $attrHashRef, $topic, $web ) = @_;
     return '' unless _initTOPIC( $web, $topic );
-print STDERR "TWO CLUBS\n";
     if ( !$TOPIC->canEdit() ) {
         throw Foswiki::OopsException(
-            'accessdenied', status => 403,
-            def   => 'topic_access',
-            web   => $_[2],
-            topic => $_[1],
-            params =>
-              [ 'Edit topic', 'You are not permitted to attach to this topic. You have been denied access by Workflow Plugin' ]
+            'accessdenied',
+            status => 403,
+            def    => 'topic_access',
+            web    => $_[2],
+            topic  => $_[1],
+            params => [
+                'Edit topic',
+'You are not permitted to attach to this topic. You have been denied access by Workflow Plugin'
+            ]
         );
     }
-print STDERR "ACE OF SPADES\n";
 }
 
 # Handle actions. REST handler, on changeState action.
@@ -302,35 +313,43 @@ sub _changeState {
 
         try {
             try {
-                $query->param('INWORKFLOWSEQUENCE' => 1);
+                $query->param( 'INWORKFLOWSEQUENCE' => 1 );
                 if ($newForm) {
+
                     # If there is a form with the new state, and it's not
                     # the same form as previously, we need to kick into edit
                     # mode to support form field changes.
-                    $url = Foswiki::Func::getScriptUrl(
-                        $web, $topic, 'edit',
-                        INWORKFLOWSEQUENCE => time());
+                    $url =
+                      Foswiki::Func::getScriptUrl( $web, $topic, 'edit',
+                        INWORKFLOWSEQUENCE => time() );
                 }
                 else {
                     $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
                 }
+
                 # SMELL: don't do this until the edit is over
                 $TOPIC->changeState($action);
                 Foswiki::Func::redirectCgiQuery( undef, $url );
-            } catch Error::Simple with {
+            }
+            catch Error::Simple with {
                 my $error = shift;
                 throw Foswiki::OopsException(
                     'oopssaveerr',
-                    web => $web, topic => $topic,
-                    params => [ $error || '?' ]);
+                    web    => $web,
+                    topic  => $topic,
+                    params => [ $error || '?' ]
+                );
             };
-        } catch Foswiki::OopsException with {
+        }
+        catch Foswiki::OopsException with {
             my $e = shift;
-            if ($e->can('generate')) {
-                $e->generate( $session );
-            } else {
+            if ( $e->can('generate') ) {
+                $e->generate($session);
+            }
+            else {
+
                 # Deprecated, TWiki compatibility only
-                $e->redirect( $session );
+                $e->redirect($session);
             }
 
         };
@@ -342,6 +361,7 @@ sub _changeState {
 sub commonTagsHandler {
     my ( $text, $topic, $web ) = @_;
     if ( _initTOPIC( $web, $topic ) ) {
+
         # show all tags defined by the preferences
         my $url = Foswiki::Func::getScriptUrl( $web, $topic, "view" );
         $TOPIC->expandWorkflowPreferences( $url, $_[0] );
@@ -359,8 +379,8 @@ sub beforeSaveHandler {
 
     return '' unless _initTOPIC( $web, $topic );
 
-    # This handler is called by Foswiki::Store::saveTopic just before
-    # the save action.
+# This handler is called by Foswiki::Store::saveTopic just before
+# the save action.
 #    my $query = Foswiki::Func::getCgiQuery();
 #    if ( !$query->param('INWORKFLOWSEQUENCE') && !$TOPIC->canEdit() ) {
 #        throw Foswiki::OopsException(

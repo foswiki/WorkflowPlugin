@@ -23,6 +23,9 @@ package Foswiki::Plugins::WorkflowPlugin::Workflow;
 
 use strict;
 
+use Foswiki::Func ();
+use Foswiki::Plugins ();
+
 sub new {
     my ( $class, $web, $topic ) = @_;
 
@@ -49,7 +52,7 @@ sub new {
 
     # | *Current state* | *Action* | *Next state* | *Allowed* |
     foreach ( split( /\n/, $text ) ) {
-        if ( /^\s*\|[\s*]*State[\s*]*\|[\s*]*Action[\s*]*\|.*\|$/i ) {
+        if (/^\s*\|[\s*]*State[\s*]*\|[\s*]*Action[\s*]*\|.*\|$/i) {
 
             @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
             shift @fields;
@@ -57,7 +60,7 @@ sub new {
             # from now on, we are in the TRANSITION table
             $inBlock = 1;
         }
-        elsif ( /^\s*\|[\s*]*State[\s*]*\|[\s*]*Allow Edit[\s*]*\|.*\|$/i ) {
+        elsif (/^\s*\|[\s*]*State[\s*]*\|[\s*]*Allow Edit[\s*]*\|.*\|$/i) {
 
             @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
             shift @fields;
@@ -84,7 +87,7 @@ sub new {
             my %data;
             @data{@fields} = split(/\s*\|\s*/);
             $this->{defaultState} ||= $data{state};
-            $this->{states}->{$data{state}} = \%data;
+            $this->{states}->{ $data{state} } = \%data;
         }
         else {
             $inBlock = 0;
@@ -96,12 +99,12 @@ sub new {
 # Get the possible actions associated with the given state
 sub getActions {
     my ( $this, $topic ) = @_;
-    my @actions = ();
+    my @actions      = ();
     my $currentState = $topic->getState();
-    my $allowed = $topic->expandMacros( $_->{allowed} );
+    my $allowed      = $topic->expandMacros( $_->{allowed} );
     foreach ( @{ $this->{transitions} } ) {
         if ( $_->{state} eq $currentState
-            && _isAllowed( $allowed ) )
+            && _isAllowed($allowed) )
         {
             push( @actions, $_->{action} );
         }
@@ -119,7 +122,7 @@ sub getNextState {
         my $allowed = $topic->expandMacros( $_->{allowed} );
         if (   $_->{state} eq $currentState
             && $_->{action} eq $action
-            && _isAllowed( $allowed ) )
+            && _isAllowed($allowed) )
         {
             return $_->{nextstate};
         }
@@ -137,7 +140,7 @@ sub getNextForm {
         my $allowed = $topic->expandMacros( $_->{allowed} );
         if (   $_->{state} eq $currentState
             && $_->{action} eq $action
-            && _isAllowed( $allowed ) )
+            && _isAllowed($allowed) )
         {
             return $_->{form};
         }
@@ -184,8 +187,9 @@ sub allowEdit {
 
     my $state = $topic->getState();
     return 0 unless $this->{states}->{$state};
-    my $allowed = $topic->expandMacros($this->{states}->{$state}->{allowedit});
-    return _isAllowed( $allowed );
+    my $allowed =
+      $topic->expandMacros( $this->{states}->{$state}->{allowedit} );
+    return _isAllowed($allowed);
 }
 
 # finds out if the current user is allowed to do something.
@@ -259,7 +263,8 @@ sub stringify {
     $s .=
       "\n---+ Transitions\n| *State* | *Action* | *Next State* | *Allowed* |\n";
     foreach ( @{ $this->{transitions} } ) {
-        $s .= "| $_->{state} | $_->{action} | $_->{nextstate} |$_->{allowed} |\n";
+        $s .=
+          "| $_->{state} | $_->{action} | $_->{nextstate} |$_->{allowed} |\n";
     }
     return $s;
 }

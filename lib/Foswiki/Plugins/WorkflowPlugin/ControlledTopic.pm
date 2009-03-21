@@ -23,7 +23,8 @@ package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
-use Foswiki;
+use Foswiki (); # for regexes
+use Foswiki::Func ();
 
 # Constructor
 sub new {
@@ -59,7 +60,7 @@ sub getState {
 # Get the available actions from the current state
 sub getActions {
     my $this = shift;
-    return $this->{workflow}->getActions( $this );
+    return $this->{workflow}->getActions($this);
 }
 
 # Set the current state in the topic
@@ -95,7 +96,7 @@ sub haveNextState {
 # Return tue if this topic is editable
 sub canEdit {
     my $this = shift;
-    return $this->{workflow}->allowEdit( $this );
+    return $this->{workflow}->allowEdit($this);
 }
 
 # Expand miscellaneous preferences defined in the workflow and topic
@@ -129,7 +130,7 @@ sub expandWorkflowPreferences {
 # is different to the form currently on the topic.
 sub newForm {
     my ( $this, $action ) = @_;
-    my $form    = $this->{workflow}->getNextForm( $this, $action );
+    my $form = $this->{workflow}->getNextForm( $this, $action );
     my $oldForm = $this->{meta}->get('FORM');
 
     # If we want to have a form attached initially, we need to have
@@ -174,7 +175,7 @@ sub changeState {
     $this->{meta}->put( "WORKFLOWHISTORY", $this->{history} );
     if ($form) {
         $this->{meta}->put( "FORM", { name => $form } );
-    }                        # else leave the existing form in place
+    }    # else leave the existing form in place
 
     Foswiki::Func::saveTopic(
         $this->{web}, $this->{topic}, $this->{meta},
@@ -182,38 +183,44 @@ sub changeState {
     );
 
     if ($notify) {
+
         # Expand vars in the notify list. This supports picking up the
         # value of the notifees from the topic itself.
-        $notify = $this->expandMacros( $notify );
+        $notify = $this->expandMacros($notify);
+
         # Dig up the bodies
-        my @persons = split(/\s*,\s*/, $notify);
+        my @persons = split( /\s*,\s*/, $notify );
         my @emails;
         foreach my $who (@persons) {
-            if ($who =~ /^$Foswiki::regex{emailAddrRegex}$/) {
-                push(@emails, $who);
-            } else {
-                $who =~ s/^.*\.//; # web name?
-                my @list = Foswiki::Func::wikinameToEmails( $who );
-                if (scalar(@list)) {
-                    push(@emails, @list);
-                } else {
-                    Foswiki::Func::writeWarning(
-                        __PACKAGE__." cannot send mail to '$who'".
-                          " - cannot determine an email address");
+            if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
+                push( @emails, $who );
+            }
+            else {
+                $who =~ s/^.*\.//;    # web name?
+                my @list = Foswiki::Func::wikinameToEmails($who);
+                if ( scalar(@list) ) {
+                    push( @emails, @list );
+                }
+                else {
+                    Foswiki::Func::writeWarning( __PACKAGE__
+                          . " cannot send mail to '$who'"
+                          . " - cannot determine an email address" );
                 }
             }
         }
-        if (scalar(@emails)) {
+        if ( scalar(@emails) ) {
+
             # Have a list of recipients
-            my $text = Foswiki::Func::loadTemplate( 'mailworkflowtransition' );
-            Foswiki::Func::setPreferencesValue('EMAILTO', join(', ', @emails));
-            Foswiki::Func::setPreferencesValue(
-                'TARGET_STATE', $this->getState());
+            my $text = Foswiki::Func::loadTemplate('mailworkflowtransition');
+            Foswiki::Func::setPreferencesValue( 'EMAILTO',
+                join( ', ', @emails ) );
+            Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
+                $this->getState() );
             $text = $this->expandMacros($text);
-            my $errors = Foswiki::Func::sendEmail($text, 5);
+            my $errors = Foswiki::Func::sendEmail( $text, 5 );
             if ($errors) {
-                Foswiki::Func::writeWarning('Failed to send transition mails: '
-                                            .$errors);
+                Foswiki::Func::writeWarning(
+                    'Failed to send transition mails: ' . $errors );
             }
         }
     }
@@ -222,13 +229,15 @@ sub changeState {
 }
 
 sub expandMacros {
-    my ($this, $text) = @_;
+    my ( $this, $text ) = @_;
     my $c = Foswiki::Func::getContext();
+
     # Workaround for Item1071
     my $memory = $c->{can_render_meta};
     $c->{can_render_meta} = $this->{meta};
-    $text = Foswiki::Func::expandCommonVariables(
-        $text, $this->{topic}, $this->{web}, $this->{meta});
+    $text =
+      Foswiki::Func::expandCommonVariables( $text, $this->{topic}, $this->{web},
+        $this->{meta} );
     $c->{can_render_meta} = $memory;
     return $text;
 }

@@ -141,10 +141,11 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, TWiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  3 Mar 2009: | Crawford Currie: Foswikibug:Item8029: support notification of a list of people on state changes  Foswikibug:Item8069: deny attach on a controlled topic Foswikibug:Item8070: expand macros in Allow and AllowEdit fields |
+|  20 Mar 2009 | Crawford Currie: Foswikibug:Item8069: deny attach on a controlled topic Foswikibug:Item8070: expand macros in Allow and AllowEdit fields |
+|  11 Dec 2008 | Crawford Currie: Foswikibug:Item8029: support notification of a list of people on state changes |
 |  15 Nov 2008 | Crawford Currie: Foswikibug:Item6114: Fixed format of history Foswikibug:Item6119: added InProcessForm and increased defensiveness in a couple of places |
 |  10 Nov 2008 | Crawford Currie: Heavily refactored to OO style to ease maintenance. TWikibug:Item6063: ensure form is saved when state changes TWikibug:Item5585: support use of ' TWikibug:Item4188: split off VarWORKFLOW documentation. TWikibug:Item5371: removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
-|  23 Apr 2008: | Crawford Currie: TWikibug:Item5369: removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
+|  23 Apr 2008 | Crawford Currie: TWikibug:Item5369: removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
 |  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most TWiki's including twiki.org does not allow .pl as extension and this creates problems when you want to update attachments |
 |  27 Jan 2008: | Markus Ueberall: Fixed for compatibility with TWiki 4.2.0 |
 |  10 Dec 2006: | Add =<nop>%WORKFLOWSTATE%=. |
