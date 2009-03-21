@@ -99,6 +99,12 @@ sub canEdit {
     return $this->{workflow}->allowEdit($this);
 }
 
+# Return tue if this topic is attachable to
+sub canAttach {
+    my $this = shift;
+    return $this->{workflow}->allowEdit( $this );
+}
+
 # Expand miscellaneous preferences defined in the workflow and topic
 sub expandWorkflowPreferences {
     my $this = shift;

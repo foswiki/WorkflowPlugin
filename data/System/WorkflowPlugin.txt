@@ -105,7 +105,9 @@ As described above the topic needs to contain a definition for the variable =WOR
 The plugin defines a number of preferences:
 %INCLUDE{VarWORKFLOW}%
 
-If you replace =%<nop>EDITTOPIC%= with =%<nop>WORKFLOWEDITTOPIC%= in your skin templates, then the _Edit_ link is crossed out when the user is not allowed to edit the page in a state.  
+If you replace =%<nop>EDITTOPIC%= with =%<nop>WORKFLOWEDITTOPIC%= in your skin templates, then the _Edit_ link is crossed out when the user is not allowed to edit the page in a state.
+
+Similarly, you can use =%<nop>WORKFLOWATTACHTOPIC%= in your skin templates to cross out the _Attach_ link.  
 
 ---++ Reporting
 A common requirement is to report on the status of topics that are in different states in the workflow. If you are using TWiki 4.2.0 or later, you can use the query search to search for topics in a specific state. For example, to search for all topics in state "APPROVED":
@@ -141,9 +143,10 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, TWiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  20 Mar 2009 | Crawford Currie: Foswikibug:Item8069: deny attach on a controlled topic Foswikibug:Item8070: expand macros in Allow and AllowEdit fields |
-|  11 Dec 2008 | Crawford Currie: Foswikibug:Item8029: support notification of a list of people on state changes |
-|  15 Nov 2008 | Crawford Currie: Foswikibug:Item6114: Fixed format of history Foswikibug:Item6119: added InProcessForm and increased defensiveness in a couple of places |
+|  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswikitask:Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
+|  20 Mar 2009 | Crawford Currie: Foswikitask:Item8069: deny attach on a controlled topic Foswikitask:Item8070: expand macros in Allow and AllowEdit fields |
+|  11 Dec 2008 | Crawford Currie: Foswikitask:Item8029: support notification of a list of people on state changes |
+|  15 Nov 2008 | Crawford Currie: Foswikitask:Item6114: Fixed format of history Foswikitask:Item6119: added InProcessForm and increased defensiveness in a couple of places |
 |  10 Nov 2008 | Crawford Currie: Heavily refactored to OO style to ease maintenance. TWikibug:Item6063: ensure form is saved when state changes TWikibug:Item5585: support use of ' TWikibug:Item4188: split off VarWORKFLOW documentation. TWikibug:Item5371: removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
 |  23 Apr 2008 | Crawford Currie: TWikibug:Item5369: removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
 |  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most TWiki's including twiki.org does not allow .pl as extension and this creates problems when you want to update attachments |

@@ -48,6 +48,8 @@ sub initPlugin {
     Foswiki::Func::registerTagHandler( 'WORKFLOWSTATE', \&_WORKFLOWSTATE );
     Foswiki::Func::registerTagHandler( 'WORKFLOWEDITTOPIC',
         \&_WORKFLOWEDITTOPIC );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWATTACHTOPIC',
+        \&_WORKFLOWATTACHTOPIC );
     Foswiki::Func::registerTagHandler( 'WORKFLOWSTATEMESSAGE',
         \&_WORKFLOWSTATEMESSAGE );
     Foswiki::Func::registerTagHandler( 'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
@@ -109,6 +111,28 @@ sub _WORKFLOWSTATEMESSAGE {
     my ( $session, $attributes, $topic, $web ) = @_;
     return '' unless _initTOPIC( $web, $topic );
     return $TOPIC->getStateMessage();
+}
+
+# Tag handler
+sub _WORKFLOWATTACHTOPIC {
+    my ( $session, $attributes, $topic, $web ) = @_;
+
+    return '' unless _initTOPIC( $web, $topic );
+
+    # replace attach tag
+    if ( $TOPIC->canAttach() ) {
+        return CGI::a(
+            {
+                href => Foswiki::Func::getScriptUrl(
+                    $web, $topic, 'attach', t => time()
+                )
+            },
+            CGI::strong("Attach")
+        );
+    }
+    else {
+        return CGI::strike("Attach");
+    }
 }
 
 # Tag handler
