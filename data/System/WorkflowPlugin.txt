@@ -143,6 +143,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, TWiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  9 Apr 2009: | Foswikitask:Item8107: block transition if topic is being edited by another user |
 |  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswikitask:Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
 |  20 Mar 2009 | Crawford Currie: Foswikitask:Item8069: deny attach on a controlled topic Foswikitask:Item8070: expand macros in Allow and AllowEdit fields |
 |  11 Dec 2008 | Crawford Currie: Foswikitask:Item8029: support notification of a list of people on state changes |
