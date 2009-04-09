@@ -101,8 +101,8 @@ sub getActions {
     my ( $this, $topic ) = @_;
     my @actions      = ();
     my $currentState = $topic->getState();
-    my $allowed      = $topic->expandMacros( $_->{allowed} );
     foreach ( @{ $this->{transitions} } ) {
+        my $allowed = $topic->expandMacros( $_->{allowed} );
         if ( $_->{state} eq $currentState
             && _isAllowed($allowed) )
         {

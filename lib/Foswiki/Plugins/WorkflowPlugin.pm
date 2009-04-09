@@ -335,6 +335,30 @@ sub _changeState {
 
         my $newForm = $TOPIC->newForm($action);
 
+        # Check that no-one else has a lease on the topic
+        my $breaklock = $query->param('breaklock');
+        unless (Foswiki::Func::isTrue($breaklock)) {
+            my ( $url, $loginName, $t ) = Foswiki::Func::checkTopicEditLock(
+                $web, $topic );
+            if ( $t ) {
+                my $currUser = Foswiki::Func::getCanonicalUserID();
+                my $locker = Foswiki::Func::getCanonicalUserID($loginName);
+                if ($locker ne $currUser) {
+                    $t = Foswiki::Time::formatDelta(
+                        $t, $Foswiki::Plugins::SESSION->i18n );
+                    $url = Foswiki::Func::getScriptUrl(
+                        $web, $topic, 'oops',
+                        template => 'oopswfplease',
+                        param1   => Foswiki::Func::getWikiName($locker),
+                        param2   => $t,
+                        param3   => $state,
+                        param4   => $action,
+                       );
+                    Foswiki::Func::redirectCgiQuery( undef, $url );
+                    return undef;
+                }
+            }
+        }
         try {
             try {
                 $query->param( 'INWORKFLOWSEQUENCE' => 1 );
@@ -344,8 +368,10 @@ sub _changeState {
                     # the same form as previously, we need to kick into edit
                     # mode to support form field changes.
                     $url =
-                      Foswiki::Func::getScriptUrl( $web, $topic, 'edit',
-                        INWORKFLOWSEQUENCE => time() );
+                      Foswiki::Func::getScriptUrl(
+                          $web, $topic, 'edit',
+                          INWORKFLOWSEQUENCE => time(),
+                          breaklock => $breaklock);
                 }
                 else {
                     $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
