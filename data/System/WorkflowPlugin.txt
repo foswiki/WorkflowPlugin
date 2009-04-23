@@ -124,7 +124,7 @@ A common requirement is to report on the status of topics that are in different 
 
 ---++ History and Acknowledgements
 
-This plugin was motivated by [[TWiki:Main.ThomasWeigert][Thomas Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and its first version (then called !ApprovalPlugin) was written by [[TWiki:Main.ThomasHartkens][Thomas Hartkens]], albeit it was focused on document approval and control. [[TWiki:Main.ThomasWeigert][Thomas Weigert]] then merged the functionality of the [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this plugin.
+This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and its first version (then called !ApprovalPlugin) was written by [[TWiki:Main.ThomasHartkens][Thomas Hartkens]], albeit it was focused on document approval and control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged the functionality of the [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this plugin.
 
 TWiki<sup>&reg;</sup> is a registered trademark of Peter Thoeny.
 
@@ -140,9 +140,10 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 ---++ Plugin Info
 
-|  Author(s): | TWiki:Main.ThomasHartkens, TWiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
+|  Author(s): | TWiki:Main.ThomasHartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  23 Apr 2009: | Foswikitask:Item1503: fix collection of notify addresses |
 |  9 Apr 2009: | Foswikitask:Item8107: block transition if topic is being edited by another user |
 |  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswikitask:Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
 |  20 Mar 2009 | Crawford Currie: Foswikitask:Item8069: deny attach on a controlled topic Foswikitask:Item8070: expand macros in Allow and AllowEdit fields |

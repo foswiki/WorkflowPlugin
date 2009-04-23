@@ -158,7 +158,7 @@ sub getNotifyList {
         my $allowed = $topic->expandMacros( $_->{allowed} );
         if (   $_->{state} eq $currentState
             && $_->{action} eq $action
-            && _isAllowed( $_->{allowed} ) )
+            && _isAllowed( $allowed ) )
         {
             return $_->{notify};
         }

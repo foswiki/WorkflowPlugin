@@ -22,20 +22,20 @@
 # =========================
 package Foswiki::Plugins::WorkflowPlugin;
 
-#use strict 'vars';
 use strict;
 
-use Error ':try';
+use Error qw(:try);
 
 use Foswiki::Func ();
 use Foswiki::Plugins::WorkflowPlugin::Workflow ();
 use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException ();
 
-our $VERSION          = '$Rev: 0$';
-our $RELEASE          = '21 Nov 2008';
-our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
-our $pluginName       = 'WorkflowPlugin';
+our $VERSION           = '$Rev: 0$';
+our $RELEASE           = '23 Apr 2009';
+our $SHORTDESCRIPTION  = 'Supports work flows associated with topics';
+our $NO_PREFS_IN_TOPIC = 1;
+our $pluginName        = 'WorkflowPlugin';
 our $TOPIC;
 
 sub initPlugin {
