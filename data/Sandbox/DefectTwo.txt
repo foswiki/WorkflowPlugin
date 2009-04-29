@@ -1,4 +1,3 @@
-%META:TOPICINFO{author="SimianApe" date="1208936463" format="1.1" version="1.4"}%
 Here will be the detailed description of the %FORMFIELD{IssueType}%.
 
 
