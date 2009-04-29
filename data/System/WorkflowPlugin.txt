@@ -143,6 +143,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  29 Apr 2009: | Foswikitask:Item8147: fix version recording |
 |  23 Apr 2009: | Foswikitask:Item1503: fix collection of notify addresses |
 |  9 Apr 2009: | Foswikitask:Item8107: block transition if topic is being edited by another user |
 |  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswikitask:Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |

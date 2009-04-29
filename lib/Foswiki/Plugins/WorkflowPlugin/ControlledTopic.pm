@@ -154,10 +154,14 @@ sub changeState {
     my $form = $this->{workflow}->getNextForm( $this, $action );
     my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
-    my ( $revdate, $revuser, $version, $revcmt ) =
-      $this->{meta}->getRevisionInfo();
+    my ( $revdate, $revuser, $version ) = $this->{meta}->getRevisionInfo();
+    if (ref($revdate) eq 'HASH') {
+        my $info = $revdate;
+        ( $revdate, $revuser, $version ) =
+          ( $info->{date}, $info->{author}, $info->{version} );
+    }
 
-    $this->setState($state);
+    $this->setState($state, $version);
 
     my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
       || '<br>$state -- $date';
