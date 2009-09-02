@@ -30,6 +30,7 @@ use Foswiki::Func ();
 use Foswiki::Plugins::WorkflowPlugin::Workflow ();
 use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException ();
+use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
 our $RELEASE          = '2 Sep 2009';
@@ -45,16 +46,20 @@ sub initPlugin {
 
     Foswiki::Func::registerRESTHandler( 'changeState', \&_changeState );
 
-    Foswiki::Func::registerTagHandler( 'WORKFLOWSTATE', \&_WORKFLOWSTATE );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWEDITTOPIC',
-        \&_WORKFLOWEDITTOPIC );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWATTACHTOPIC',
-        \&_WORKFLOWATTACHTOPIC );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWSTATEMESSAGE',
-        \&_WORKFLOWSTATEMESSAGE );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWTRANSITION',
-        \&_WORKFLOWTRANSITION );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWSTATE', \&_WORKFLOWSTATE );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWEDITTOPIC', \&_WORKFLOWEDITTOPIC );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWATTACHTOPIC', \&_WORKFLOWATTACHTOPIC );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWSTATEMESSAGE', \&_WORKFLOWSTATEMESSAGE );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWTRANSITION', \&_WORKFLOWTRANSITION );
+    Foswiki::Func::registerTagHandler(
+        'WORKFLOWFORK', \&_WORKFLOWFORK );
 
     return 1;
 }
@@ -68,6 +73,8 @@ sub _initTOPIC {
 
     my $controlledTopic = $cache{"$web.$topic"};
     return $controlledTopic if $controlledTopic;
+
+    return undef unless Foswiki::Func::isValidTopicName( $topic );
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
 
@@ -254,6 +261,35 @@ sub _WORKFLOWSTATE {
     return $controlledTopic->getState();
 }
 
+# Tag handler
+sub _WORKFLOWFORK {
+    my ( $session, $attributes, $topic, $web ) = @_;
+    my $newtopic = $attributes->{_DEFAULT};
+    return '' unless $newtopic;
+    my $forktopic = $attributes->{topic} || $topic;
+    if (!Foswiki::Func::topicExists($web, $forktopic)) {
+        return "<span class='foswikiAlert'>WORKFLOWFORK: '$forktopic' does not exist</span>";
+    }
+    if (Foswiki::Func::topicExists($web, $newtopic)) {
+        return "<span class='foswikiAlert'>WORKFLOWFORK: '$newtopic' already exists</span>";
+    }
+
+    my $label = $attributes->{label} || 'Fork';
+    my $buttonClass =
+      Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
+      || 'foswikiChangeFormButton foswikiSubmit"';
+    my $url = Foswiki::Func::getScriptUrl(
+        $web, $newtopic, 'save');
+    return <<HTML;
+<form name='forkWorkflow' action='$url' method="POST">
+<input type='hidden' name='action_save' value='action_save' />
+<input type='hidden' name='workflowplugin_fork' value='1' />
+<input type='hidden' name='templatetopic' value='$forktopic' />
+<input type='submit' class='$buttonClass' value='$label' />
+</form>
+HTML
+}
+
 # Used to trap an edit and check that it is permitted by the workflow
 sub beforeEditHandler {
     my ( $text, $topic, $web, $meta ) = @_;
@@ -421,16 +457,14 @@ sub commonTagsHandler {
     $_[0] =~ s/%WORKFLOW[A-Z_]*%//g;
 }
 
+our $handlingFork = 0;
+
+sub beforeSaveHandler {
+    my ( $text, $topic, $web, $meta ) = @_;
+
+    my $query = Foswiki::Func::getCgiQuery();
+
 # Check the the workflow permits a save operation.
-#sub beforeSaveHandler {
-#    my ( $text, $topic, $web ) = @_;
-#
-#    my $controlledTopic = _initTOPIC( $web, $topic );
-#    return '' unless $controlledTopic;
-#
-# This handler is called by Foswiki::Store::saveTopic just before
-# the save action.
-#    my $query = Foswiki::Func::getCgiQuery();
 #    if ( !$query->param('INWORKFLOWSEQUENCE')
 #         && !$controlledTopic->canEdit() ) {
 #        throw Foswiki::OopsException(
@@ -443,6 +477,35 @@ sub commonTagsHandler {
 #        );
 #        return 0;
 #   }
-#}
+
+    # Update the history in the template topic and the new topic
+    my $tt = $query->param('templatetopic');
+    if (!$handlingFork
+          && $query->param('workflowplugin_fork')
+          && $tt) {
+        if ( Foswiki::Func::topicExists( $web, $tt ) ) {
+            # Validated
+            $tt =
+              Foswiki::Sandbox::untaintUnchecked( $tt );
+        }
+        # Block re-entry
+        local $handlingFork = 1;
+        my $now = Foswiki::Func::formatTime( time(), undef, 'servertime' );
+        my $who = Foswiki::Func::getWikiUserName();
+
+        my $history = $meta->get('WORKFLOWHISTORY') || {};
+        # Note that we throw away the history from the forked topic
+        $history->{value} = "<br>Forked from $tt by $who at $now";
+        $meta->put( "WORKFLOWHISTORY", $history );
+
+        my ($ttmeta, $tttext) = Foswiki::Func::readTopic($web, $tt);
+        $history = $ttmeta->get('WORKFLOWHISTORY') || {};
+        $history->{value} .= "<br>Forked to $topic by $who at $now";
+        $ttmeta->put( "WORKFLOWHISTORY", $history );
+
+        Foswiki::Func::saveTopic(
+            $web, $tt, $ttmeta, $tttext, { minor => 1 } );
+    }
+}
 
 1;

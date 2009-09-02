@@ -3,8 +3,6 @@
 %WORKFLOWSTATEMESSAGE%
 
 Some defect.
-
-
    * Set WORKFLOW = DefectWorkflow
 
 Example history formats:
@@ -12,7 +10,6 @@ Example history formats:
    * #Set WORKFLOWHISTORYFORMAT = $n| $state | $wikiusername | $date |
    * Set WORKFLOWHISTORYFORMAT = $n $state, $wikiusername, $date
 
-%WORKFLOWTRANSITION% 
+%WORKFLOWTRANSITION%
 
 %WORKFLOWHISTORY%
-

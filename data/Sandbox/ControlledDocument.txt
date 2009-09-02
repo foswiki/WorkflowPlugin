@@ -11,3 +11,5 @@ Some controlled text.
 | Last version in APPROVED state | %WORKFLOWLASTVERSION_APPROVED% |
 
 Workflow history: %WORKFLOWHISTORY%
+
+%WORKFLOWFORK{"ControlledDocumentFork" label="Create <nop>ControlledDocumentFork"}%
