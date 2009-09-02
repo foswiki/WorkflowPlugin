@@ -32,7 +32,7 @@ use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '3 Jun 2009';
+our $RELEASE          = '2 Sep 2009';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';

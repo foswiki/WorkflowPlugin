@@ -103,8 +103,9 @@ sub getActions {
     my $currentState = $topic->getState();
     foreach ( @{ $this->{transitions} } ) {
         my $allowed = $topic->expandMacros( $_->{allowed} );
+        my $nextState = $topic->expandMacros( $_->{nextstate} );
         if ( $_->{state} eq $currentState
-            && _isAllowed($allowed) )
+            && _isAllowed($allowed) && $nextState )
         {
             push( @actions, $_->{action} );
         }
@@ -120,11 +121,12 @@ sub getNextState {
     my $currentState = $topic->getState();
     foreach ( @{ $this->{transitions} } ) {
         my $allowed = $topic->expandMacros( $_->{allowed} );
+        my $nextState = $topic->expandMacros( $_->{nextstate} );
         if (   $_->{state} eq $currentState
             && $_->{action} eq $action
-            && _isAllowed($allowed) )
+            && _isAllowed($allowed) && $nextState )
         {
-            return $_->{nextstate};
+            return $nextState;
         }
     }
     return undef;
