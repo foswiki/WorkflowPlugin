@@ -74,7 +74,13 @@ sub _initTOPIC {
     my $controlledTopic = $cache{"$web.$topic"};
     return $controlledTopic if $controlledTopic;
 
-    return undef unless Foswiki::Func::isValidTopicName( $topic );
+    if (defined &Foswiki::Func::isValidTopicName) {
+        return undef unless Foswiki::Func::isValidTopicName( $topic );
+    } else {
+        # (tm)wiki doesn't have isValidTopicName
+        # best we can do
+        return undef unless Foswiki::Func::isValidWikiWord( $topic );
+    }
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
 
