@@ -33,7 +33,7 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '2 Sep 2009';
+our $RELEASE          = '19 Oct 2009';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
@@ -501,12 +501,12 @@ sub beforeSaveHandler {
 
         my $history = $meta->get('WORKFLOWHISTORY') || {};
         # Note that we throw away the history from the forked topic
-        $history->{value} = "<br>Forked from $tt by $who at $now";
+        $history->{value} = "<br>Forked from [[$tt]] by $who at $now";
         $meta->put( "WORKFLOWHISTORY", $history );
 
         my ($ttmeta, $tttext) = Foswiki::Func::readTopic($web, $tt);
         $history = $ttmeta->get('WORKFLOWHISTORY') || {};
-        $history->{value} .= "<br>Forked to $topic by $who at $now";
+        $history->{value} .= "<br>Forked to [[$topic]] by $who at $now";
         $ttmeta->put( "WORKFLOWHISTORY", $history );
 
         Foswiki::Func::saveTopic(
