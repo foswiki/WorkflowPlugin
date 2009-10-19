@@ -8,7 +8,9 @@ The following macros can be used in any topic that has an associated workflow.
 | =%<nop>WORKFLOWLASTVERSION_State%= | Expands to topic version when the document was last in the state _State_. |
 | =%<nop>WORKFLOWHISTORY%= | Expands to the history of state transitions the topic has undergone. The format of the history is dictated by the =WORKFLOWHISTORYFORMAT= (described below). |
 | =%<nop>WORKFLOWSTATE%= | Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned. |
-| =%<nop>WORKFLOWFORK{...}%= | Expands to a button that will create a copy of the current topic (see below for more details) |
+| =%<nop>WORKFLOWFORK{...}%= | Expands to a button that will create a copy of the _current_ topic (see below for more details) |
+
+(All the macros accept an optional default parameter, which is the name of a topic, and a =web= parameter. If these are omitted, they will default to the current topic.)
 
 Furthermore, the plugin replaces any macro starting with =WORKFLOW= that is defined in the workflow description file.
 
@@ -36,8 +38,16 @@ The default is =twikiChangeFormButton twikiSubmit=.
 The =WORKFLOWFORK= is used to generate a button that will create a copy of
 a workflow topic. It accepts the following parameters:
 | *Parameter* | *Meaning* | *Default* |
-| "TopicName" | Name of the new topic to create | required, no default |
-| =topic="ForkTopic"= | Name of the topic to fork | current topic |
+| "TopicName" | (Optional) name of the topic to fork | current topic |
+| =web= | (Optional) name of the web containing the topic to fork | current web |
+| =newnames="NameOne,NameTwo"= | Comma-separated list of name(s) of the new topic(s) to create, You can use a web specifier on the topic names. | required, no default. |
 | =label="Fork"= | Label to use in the button | ="Fork"= |
-
+| =lockdown="on"= | Set this if you want the forked topic to be set as uneditable after the fork | =off= |
 This macro is used when you have a topic that has to be split to follow different routes through a workflow - for example, when a requirement is refined to create two new requirements that must follow their own lifecycles; or perhaps a problem report is found to affect two different components of a system, and the resolutions have to be separately tracked. Both the copied topic and the new topic will have workflow history entries added.
+
+For example,
+=%WORKFLOWFORK{"OriginalTopic" label="Divide and conquer" newnames="ForkPathOne,ForkPathTwo" lockdown="on"}%= will create two copies of =OriginalTopic=, named =ForkPathOne= and =ForkPathTwo= and set the =OriginalTopic= as uneditable (using ALLOWTOPICCHANGE).
+
+The histories in both the fork copies and the original topic record what happened.
+
+%X% due to a bug in versions of the plugin prior to Oct 2009, the default "TopicName" parameter was interpreted as the name of the *new* topic to fork to. This has been corrected, but the macro will revert to the old meaning if you omit the =newnames= parameter.

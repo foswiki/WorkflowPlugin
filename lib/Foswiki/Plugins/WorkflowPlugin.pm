@@ -44,7 +44,12 @@ sub initPlugin {
 
     %cache = ();
 
-    Foswiki::Func::registerRESTHandler( 'changeState', \&_changeState );
+    Foswiki::Func::registerRESTHandler(
+        'changeState', \&_changeState,
+        authenticate => 1, http_allow => 'POST' );
+    Foswiki::Func::registerRESTHandler(
+        'fork', \&_restFork,
+        authenticate => 1, http_allow => 'POST' );
 
     Foswiki::Func::registerTagHandler(
         'WORKFLOWSTATE', \&_WORKFLOWSTATE );
@@ -107,10 +112,19 @@ sub _initTOPIC {
     return $controlledTopic;
 }
 
+sub _getTopicName {
+    my ($attributes, $web, $topic) = @_;
+
+    return Foswiki::Func::normalizeWebTopicName(
+        $attributes->{web} || $web,
+        $attributes->{_DEFAULT} || $topic );
+}
+
 # Tag handler
 sub _WORKFLOWEDITTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -131,15 +145,10 @@ sub _WORKFLOWEDITTOPIC {
 sub _WORKFLOWSTATEMESSAGE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    my $theWeb = $attributes->{web} || $web;
-    my $theTopic = $attributes->{_DEFAULT} || $topic;
-
-    ( $theWeb, $theTopic ) =
-      Foswiki::Func::normalizeWebTopicName( $theWeb, $theTopic );
-
-    my $controlledTopic = _initTOPIC( $theWeb, $theTopic );
-
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
+
     return $controlledTopic->getStateMessage();
 }
 
@@ -147,6 +156,7 @@ sub _WORKFLOWSTATEMESSAGE {
 sub _WORKFLOWATTACHTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -170,13 +180,8 @@ sub _WORKFLOWATTACHTOPIC {
 sub _WORKFLOWHISTORY {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    my $theWeb = $attributes->{web} || $web;
-    my $theTopic = $attributes->{_DEFAULT} || $topic;
-
-    ( $theWeb, $theTopic ) =
-      Foswiki::Func::normalizeWebTopicName( $theWeb, $theTopic );
-
-    my $controlledTopic = _initTOPIC( $theWeb, $theTopic );
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
     return $controlledTopic->getHistoryText();
@@ -186,6 +191,7 @@ sub _WORKFLOWHISTORY {
 sub _WORKFLOWTRANSITION {
     my ( $session, $attributes, $topic, $web ) = @_;
 
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -255,13 +261,8 @@ sub _WORKFLOWTRANSITION {
 sub _WORKFLOWSTATE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    my $theWeb = $attributes->{web} || $web;
-    my $theTopic = $attributes->{_DEFAULT} || $topic;
-
-    ( $theWeb, $theTopic ) =
-      Foswiki::Func::normalizeWebTopicName( $theWeb, $theTopic );
-
-    my $controlledTopic = _initTOPIC( $theWeb, $theTopic );
+    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
     return $controlledTopic->getState();
@@ -270,27 +271,42 @@ sub _WORKFLOWSTATE {
 # Tag handler
 sub _WORKFLOWFORK {
     my ( $session, $attributes, $topic, $web ) = @_;
-    my $newtopic = $attributes->{_DEFAULT};
-    return '' unless $newtopic;
-    my $forktopic = $attributes->{topic} || $topic;
-    if (!Foswiki::Func::topicExists($web, $forktopic)) {
-        return "<span class='foswikiAlert'>WORKFLOWFORK: '$forktopic' does not exist</span>";
+    my $newnames;
+    if (!defined $attributes->{newnames}) {
+        # Old interpretation, for compatibility
+        $newnames = $attributes->{_DEFAULT};
+        $topic = $attributes->{topic} || $topic;
+    } else {
+        ($web, $topic) = _getTopicName($attributes, $web, $topic);
+        $newnames = $attributes->{newnames};
     }
-    if (Foswiki::Func::topicExists($web, $newtopic)) {
-        return "<span class='foswikiAlert'>WORKFLOWFORK: '$newtopic' already exists</span>";
+    return '' unless $newnames;
+    my $lockdown = Foswiki::Func::isTrue($attributes->{lockdown});
+
+    if (!Foswiki::Func::topicExists($web, $topic)) {
+        return "<span class='foswikiAlert'>WORKFLOWFORK: '$topic' does not exist</span>";
     }
+    my $errors = '';
+    foreach my $newname ( split(',', $newnames ) ) {
+        my ($w, $t) =
+          Foswiki::Func::normalizeWebTopicName( $web, $newname );
+        if (Foswiki::Func::topicExists($w, $t)) {
+            $errors .= "<span class='foswikiAlert'>WORKFLOWFORK: $w.$t exists</span><br />";
+        }
+    }
+    return $errors if $errors;
 
     my $label = $attributes->{label} || 'Fork';
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
       || 'foswikiChangeFormButton foswikiSubmit"';
-    my $url = Foswiki::Func::getScriptUrl(
-        $web, $newtopic, 'save');
+    my $url = Foswiki::Func::getScriptUrl( 'WorkflowPlugin', 'fork', 'rest');
     return <<HTML;
 <form name='forkWorkflow' action='$url' method="POST">
-<input type='hidden' name='action_save' value='action_save' />
-<input type='hidden' name='workflowplugin_fork' value='1' />
-<input type='hidden' name='templatetopic' value='$forktopic' />
+<input type='hidden' name='topic' value='$web.$topic' />
+<input type='hidden' name='newnames' value='$newnames' />
+<input type='hidden' name='lockdown' value='$lockdown' />
+<input type='hidden' name='endPoint' value='$web.$topic' />
 <input type='submit' class='$buttonClass' value='$label' />
 </form>
 HTML
@@ -463,7 +479,72 @@ sub commonTagsHandler {
     $_[0] =~ s/%WORKFLOW[A-Z_]*%//g;
 }
 
-our $handlingFork = 0;
+sub _restFork {
+    my ($session) = @_; 
+    # Update the history in the template topic and the new topic
+    my $query = Foswiki::Func::getCgiQuery();
+    my $forkTopic = $query->param('topic');
+    my @newnames = split(/,/, $query->param('newnames'));
+    my $lockdown = $query->param('lockdown');
+
+    (my $forkWeb, $forkTopic) =
+      Foswiki::Func::normalizeWebTopicName( undef, $forkTopic );
+
+    if ( Foswiki::Func::topicExists( $forkWeb, $forkTopic ) ) {
+        # Validated
+        $forkWeb =
+          Foswiki::Sandbox::untaintUnchecked( $forkWeb );
+        $forkTopic =
+          Foswiki::Sandbox::untaintUnchecked( $forkTopic );
+    }
+
+    my ($ttmeta, $tttext) = Foswiki::Func::readTopic(
+        $forkWeb, $forkTopic);
+
+    my $now = Foswiki::Func::formatTime( time(), undef, 'servertime' );
+    my $who = Foswiki::Func::getWikiUserName();
+
+    # create the new topics
+    foreach my $newname ( @newnames ) {
+        $newname =
+          Foswiki::Sandbox::untaintUnchecked( $newname );
+        my ($w, $t) =
+          Foswiki::Func::normalizeWebTopicName( $forkWeb, $newname );
+        if (Foswiki::Func::topicExists($w, $t)) {
+            return "<span class='foswikiAlert'>WORKFLOWFORK: '$w.$t' already exists</span>";
+        }
+        my $text = $tttext;
+        my $meta = new Foswiki::Meta($session, $w, $t);
+        # Clone the template
+        foreach my $k ( keys %$ttmeta ) {
+            # Note that we don't carry over the history from the forked topic
+            next if ( $k =~ /^_/ || $k eq 'WORKFLOWHISTORY' );
+            my @data;
+            foreach my $item ( @{ $ttmeta->{$k} } ) {
+                my %datum = %$item;
+                push( @data, \%datum );
+            }
+            $meta->putAll( $k, @data );
+        }
+        my $history = {
+            value => "<br>Forked from [[$forkWeb.$forkTopic]] by $who at $now",
+        };
+        $meta->put( "WORKFLOWHISTORY", $history );
+        Foswiki::Func::saveTopic($w, $t, $meta, $text);
+    }
+
+    my $history = $ttmeta->get('WORKFLOWHISTORY') || {};
+    $history->{value} .= "<br>Forked to [[" .
+      join(',', @newnames). "]] by $who at $now";
+    $ttmeta->put( "WORKFLOWHISTORY", $history );
+
+    if ($lockdown) {
+        $ttmeta->putKeyed("PREFERENCE",
+                          { name => 'ALLOWTOPICCHANGE', value => 'nobody' });
+    }
+
+    Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext );
+}
 
 sub beforeSaveHandler {
     my ( $text, $topic, $web, $meta ) = @_;
@@ -483,35 +564,6 @@ sub beforeSaveHandler {
 #        );
 #        return 0;
 #   }
-
-    # Update the history in the template topic and the new topic
-    my $tt = $query->param('templatetopic');
-    if (!$handlingFork
-          && $query->param('workflowplugin_fork')
-          && $tt) {
-        if ( Foswiki::Func::topicExists( $web, $tt ) ) {
-            # Validated
-            $tt =
-              Foswiki::Sandbox::untaintUnchecked( $tt );
-        }
-        # Block re-entry
-        local $handlingFork = 1;
-        my $now = Foswiki::Func::formatTime( time(), undef, 'servertime' );
-        my $who = Foswiki::Func::getWikiUserName();
-
-        my $history = $meta->get('WORKFLOWHISTORY') || {};
-        # Note that we throw away the history from the forked topic
-        $history->{value} = "<br>Forked from [[$tt]] by $who at $now";
-        $meta->put( "WORKFLOWHISTORY", $history );
-
-        my ($ttmeta, $tttext) = Foswiki::Func::readTopic($web, $tt);
-        $history = $ttmeta->get('WORKFLOWHISTORY') || {};
-        $history->{value} .= "<br>Forked to [[$topic]] by $who at $now";
-        $ttmeta->put( "WORKFLOWHISTORY", $history );
-
-        Foswiki::Func::saveTopic(
-            $web, $tt, $ttmeta, $tttext, { minor => 1 } );
-    }
 }
 
 1;
