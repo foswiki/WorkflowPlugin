@@ -161,7 +161,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  19 Oct 2009: | Foswiki:Tasks:Item2092: Link fork topics mentioned in historyFoswiki:Tasks:Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks:Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
+|  19 Oct 2009: | Foswiki:Tasks:Item2092: Link fork topics mentioned in history Foswiki:Tasks:Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks:Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
 |  2 Sep 2009: | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. |
 |  3 Jun 2009: | Foswiki:Tasks.:Item8172: Dean Spicer added support for cross-topic state and history queries |
 |  29 Apr 2009: | Foswiki:Tasks.:Item8147: fix version recording |

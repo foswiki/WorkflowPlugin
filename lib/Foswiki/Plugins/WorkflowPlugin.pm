@@ -33,7 +33,7 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '19 Oct 2009';
+our $RELEASE          = '22 Jan 2010';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
@@ -534,8 +534,8 @@ sub _restFork {
     }
 
     my $history = $ttmeta->get('WORKFLOWHISTORY') || {};
-    $history->{value} .= "<br>Forked to [[" .
-      join(',', @newnames). "]] by $who at $now";
+    $history->{value} .= "<br>Forked to " .
+      join(', ', map { "[[$forkWeb.$_]]" } @newnames). " by $who at $now";
     $ttmeta->put( "WORKFLOWHISTORY", $history );
 
     if ($lockdown) {

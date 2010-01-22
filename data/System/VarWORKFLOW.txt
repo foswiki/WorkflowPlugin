@@ -35,10 +35,10 @@ The appearance of the button to change state can be configured by providing a CS
    * Set WORKFLOWTRANSITIONCSSCLASS = myCSSClass
 The default is =twikiChangeFormButton twikiSubmit=.
 
-The =WORKFLOWFORK= is used to generate a button that will create a copy of
+The =WORKFLOWFORK= macro is used to generate a button that will create a copy of
 a workflow topic. It accepts the following parameters:
 | *Parameter* | *Meaning* | *Default* |
-| "TopicName" | (Optional) name of the topic to fork | current topic |
+| ="TopicName"= | (Optional) name of the topic to fork | current topic |
 | =web= | (Optional) name of the web containing the topic to fork | current web |
 | =newnames="NameOne,NameTwo"= | Comma-separated list of name(s) of the new topic(s) to create, You can use a web specifier on the topic names. | required, no default. |
 | =label="Fork"= | Label to use in the button | ="Fork"= |
@@ -46,7 +46,7 @@ a workflow topic. It accepts the following parameters:
 This macro is used when you have a topic that has to be split to follow different routes through a workflow - for example, when a requirement is refined to create two new requirements that must follow their own lifecycles; or perhaps a problem report is found to affect two different components of a system, and the resolutions have to be separately tracked. Both the copied topic and the new topic will have workflow history entries added.
 
 For example,
-=%WORKFLOWFORK{"OriginalTopic" label="Divide and conquer" newnames="ForkPathOne,ForkPathTwo" lockdown="on"}%= will create two copies of =OriginalTopic=, named =ForkPathOne= and =ForkPathTwo= and set the =OriginalTopic= as uneditable (using ALLOWTOPICCHANGE).
+=%<nop>WORKFLOWFORK{"OriginalTopic" label="Divide and conquer" newnames="ForkPathOne,ForkPathTwo" lockdown="on"}%= will create two copies of =OriginalTopic=, named =ForkPathOne= and =ForkPathTwo= and set the =OriginalTopic= as uneditable (using ALLOWTOPICCHANGE).
 
 The histories in both the fork copies and the original topic record what happened.
 
