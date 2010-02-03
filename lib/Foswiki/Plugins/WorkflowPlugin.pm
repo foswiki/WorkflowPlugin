@@ -33,7 +33,7 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '22 Jan 2010';
+our $RELEASE          = '03 Feb 2010';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';

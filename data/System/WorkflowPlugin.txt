@@ -161,16 +161,17 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | TWiki:Main.ThomasHartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  19 Oct 2009: | Foswiki:Tasks:Item2092: Link fork topics mentioned in history Foswiki:Tasks:Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks:Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
+|  03 Feb 2009: | Foswiki:Tasks.Item8462: Minor doc fixes -- Foswiki:Main.AndrewJones |
+|  19 Oct 2009: | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
 |  2 Sep 2009: | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. |
-|  3 Jun 2009: | Foswiki:Tasks.:Item8172: Dean Spicer added support for cross-topic state and history queries |
-|  29 Apr 2009: | Foswiki:Tasks.:Item8147: fix version recording |
-|  23 Apr 2009: | Foswiki:Tasks.:Item1503: fix collection of notify addresses |
-|  9 Apr 2009: | Foswiki:Tasks.:Item8107: block transition if topic is being edited by another user |
-|  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswiki:Tasks.:Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
-|  20 Mar 2009 | Crawford Currie: Foswiki:Tasks.:Item8069: deny attach on a controlled topic Foswiki:Tasks.:Item8070: expand macros in Allow and AllowEdit fields |
-|  11 Dec 2008 | Crawford Currie: Foswiki:Tasks.:Item8029: support notification of a list of people on state changes |
-|  15 Nov 2008 | Crawford Currie: Foswiki:Tasks.:Item6114: Fixed format of history Foswiki:Tasks.:Item6119: added InProcessForm and increased defensiveness in a couple of places |
+|  3 Jun 2009: | Foswiki:Tasks.Item8172: Dean Spicer added support for cross-topic state and history queries |
+|  29 Apr 2009: | Foswiki:Tasks.Item8147: fix version recording |
+|  23 Apr 2009: | Foswiki:Tasks.Item1503: fix collection of notify addresses |
+|  9 Apr 2009: | Foswiki:Tasks.Item8107: block transition if topic is being edited by another user |
+|  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswiki:Tasks.Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
+|  20 Mar 2009 | Crawford Currie: Foswiki:Tasks.Item8069: deny attach on a controlled topic Foswiki:Tasks.Item8070: expand macros in Allow and AllowEdit fields |
+|  11 Dec 2008 | Crawford Currie: Foswiki:Tasks.Item8029: support notification of a list of people on state changes |
+|  15 Nov 2008 | Crawford Currie: Foswiki:Tasks.Item6114: Fixed format of history Foswiki:Tasks.Item6119: added !InProcessForm and increased defensiveness in a couple of places |
 |  10 Nov 2008 | Crawford Currie: Heavily refactored to OO style to ease maintenance. TWikibug:Item6063: ensure form is saved when state changes TWikibug:Item5585: support use of ' TWikibug:Item4188: split off VarWORKFLOW documentation. TWikibug:Item5371: removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
 |  23 Apr 2008 | Crawford Currie: TWikibug:Item5369: removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
 |  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most TWiki's including twiki.org does not allow .pl as extension and this creates problems when you want to update attachments |
@@ -185,7 +186,8 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  24 Jul 2006: | Ported to Dakar. Fixed problem in referencing previous versions. Fixed error messages. Fixed Documentation errors. |
 |  16 Feb 2005: | Initial version of !ApprovalPlugin |
 |  05 Feb 2004: | Initial version of !WorkFlowAddOn |
-|  Plugin Home: | Foswiki:Extensions/%TOPIC% |
+|  Home: | http://foswiki.org/Extensions/%TOPIC% |
+|  Support: | http://foswiki.org/Support/%TOPIC% |
 
 <!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
 
