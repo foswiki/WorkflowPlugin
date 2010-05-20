@@ -41,6 +41,7 @@ sub new {
     }
     my $this = bless(
         {
+            name        => "$web.$topic",
             preferences => {},
             states      => {},
             transitions => []

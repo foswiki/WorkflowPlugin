@@ -22,3 +22,4 @@ data/Sandbox/TMApprovalForm.txt 0640 Forms for approval workflow
 data/Sandbox/ApprovedForm.txt 0640 Forms for approval workflow
 templates/mailworkflowtransition.tmpl 0640 Mail template
 templates/oopswfplease.tmpl 0640 Lease conflict template
+templates/workflowedit.tmpl 0640 Edit template

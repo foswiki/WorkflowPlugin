@@ -30,6 +30,7 @@ The standard [[format tokens]] are supported, as well as the following special t
 | =$wikiusername= | Who triggered the transition |
 | =$state= | The target state of the transition |
 | =$date= | Date of the transition |
+| =$rev= | Version at the transition |
 
 The appearance of the button to change state can be configured by providing a CSS class. For example,
    * Set WORKFLOWTRANSITIONCSSCLASS = myCSSClass

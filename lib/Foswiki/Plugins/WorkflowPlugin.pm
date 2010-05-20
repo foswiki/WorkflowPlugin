@@ -1,18 +1,4 @@
-#
-# Copyright (C) 2005 Thomas Hartkens <thomas@hartkens.de>
-# Copyright (C) 2005 Thomas Weigert <thomas.weigert@motorola.com>
-# Copyright (C) 2008 Crawford Currie http://c-dot.co.uk
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details, published at
-# http://www.gnu.org/copyleft/gpl.html
+# See bottom of file for license and copyright information
 
 # TODO
 # 1. Create initial values based on form when attaching a form for
@@ -25,6 +11,7 @@ package Foswiki::Plugins::WorkflowPlugin;
 use strict;
 
 use Error ':try';
+use Assert;
 
 use Foswiki::Func ();
 use Foswiki::Plugins::WorkflowPlugin::Workflow ();
@@ -80,7 +67,8 @@ sub _initTOPIC {
     return $controlledTopic if $controlledTopic;
 
     if (defined &Foswiki::Func::isValidTopicName) {
-        return undef unless Foswiki::Func::isValidTopicName( $topic );
+        # Allow non-wikiwords
+        return undef unless Foswiki::Func::isValidTopicName( $topic, 1 );
     } else {
         # (tm)wiki doesn't have isValidTopicName
         # best we can do
@@ -94,9 +82,12 @@ sub _initTOPIC {
     Foswiki::Func::popTopicContext( $web, $topic );
 
     if ($workflowName) {
-
         ( my $wfWeb, $workflowName ) =
           Foswiki::Func::normalizeWebTopicName( $web, $workflowName );
+
+        return undef unless Foswiki::Func::topicExists(
+            $wfWeb, $workflowName );
+
         my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
             $workflowName );
 
@@ -203,27 +194,28 @@ sub _WORKFLOWTRANSITION {
     my $cs              = $controlledTopic->getState();
 
     unless ($numberOfActions) {
-        return CGI::span(
-            { class => 'foswikiAlert' },
-            "NO AVAILABLE ACTIONS in state $cs"
-        ) if $controlledTopic->debugging();
+        return '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state '
+          .$cs.'</span>' if $controlledTopic->debugging();
         return '';
     }
 
     my @fields = (
-        CGI::hidden( 'WORKFLOWSTATE', $cs ),
-        CGI::hidden( 'topic',         "$web.$topic" ),
-
+        "<input type='hidden' name='WORKFLOWSTATE' value='$cs' />",
+        # Can't use CGI because a top parameter could defeat the value we need
+        "<input type='hidden' name='topic' value='$web.$topic' />",
+        
         # Use a time field to help defeat the cache
-        CGI::hidden( 't', time() )
-    );
-
+        "<input type='hidden' name='t' value='".time()."' />"
+       );
+    
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
-      || 'foswikiChangeFormButton foswikiSubmit"';
-
+          || 'foswikiChangeFormButton foswikiSubmit"';
+    
     if ( $numberOfActions == 1 ) {
-        push( @fields, CGI::hidden( 'WORKFLOWACTION', $actions[0] ) );
+        push( @fields,
+              "<input type='hidden' name='WORKFLOWACTION' value='"
+                .$actions[0]."' />" );
         push(
             @fields,
             CGI::submit(
@@ -248,11 +240,13 @@ sub _WORKFLOWTRANSITION {
             )
         );
     }
-    my $url = Foswiki::Func::getScriptUrl( $pluginName, 'changeState', 'rest' );
+    my $url = Foswiki::Func::getScriptUrl(
+        $pluginName, 'changeState', 'rest' );
     my $form =
         CGI::start_form( -method => 'POST', -action => $url )
       . join( '', @fields )
       . CGI::end_form();
+
     $form =~ s/\r?\n//g;    # to avoid breaking TML
     return $form;
 }
@@ -320,7 +314,8 @@ sub beforeEditHandler {
     return '' unless $controlledTopic;
 
     my $query = Foswiki::Func::getCgiQuery();
-    if ( !$query->param('INWORKFLOWSEQUENCE') && !$controlledTopic->canEdit() ) {
+    if ( !$query->param('INWORKFLOWSEQUENCE')
+           && !$controlledTopic->canEdit() ) {
         throw Foswiki::OopsException(
             'accessdenied',
             status => 403,
@@ -414,6 +409,7 @@ sub _changeState {
             }
         }
     }
+
     try {
         try {
             $query->param( 'INWORKFLOWSEQUENCE' => 1 );
@@ -421,30 +417,41 @@ sub _changeState {
 
                 # If there is a form with the new state, and it's not
                 # the same form as previously, we need to kick into edit
-                # mode to support form field changes.
+                # mode to support form field changes. In this case the
+                # transition is delayed until after the edit is saved
+                # (the transition is executed by the beforeSaveHandler)
                 $url =
                   Foswiki::Func::getScriptUrl(
                       $web, $topic, 'edit',
-                      INWORKFLOWSEQUENCE => time(),
-                      breaklock => $breaklock);
+                      INWORKFLOWSEQUENCE    => time(),
+                      breaklock             => $breaklock,
+                      formtemplate          => $newForm,
+                      # pass info about pending state change
+                      template              => 'workflowedit',
+                      WORKFLOWPENDINGACTION => $action,
+                      WORKFLOWCURRENTSTATE  => $state,
+                      WORKFLOWPENDINGSTATE  =>
+                        $controlledTopic->haveNextState($action),
+                      WORKFLOWWORKFLOW      =>
+                        $controlledTopic->{workflow}->{name},
+                     );
             }
             else {
+                $controlledTopic->changeState($action);
+                $controlledTopic->save();
                 $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
             }
 
-            # SMELL: don't do this until the edit is over
-            $controlledTopic->changeState($action);
             Foswiki::Func::redirectCgiQuery( undef, $url );
-        }
-          catch Error::Simple with {
-              my $error = shift;
-              throw Foswiki::OopsException(
-                  'oopssaveerr',
-                  web    => $web,
-                  topic  => $topic,
-                  params => [ $error || '?' ]
-                 );
-          };
+        } catch Error::Simple with {
+            my $error = shift;
+            throw Foswiki::OopsException(
+                'oopssaveerr',
+                web    => $web,
+                topic  => $topic,
+                params => [ $error || '?' ]
+               );
+        };
     } catch Foswiki::OopsException with {
         my $e = shift;
         if ( $e->can('generate') ) {
@@ -546,24 +553,61 @@ sub _restFork {
     Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext );
 }
 
+# The beforeSaveHandler inspects the request parameters to see if the
+# right params are present to trigger a state change. The legality of
+# the state change is *not* checked - it's assumed that the change is
+# coming as the result of an edit invoked by a state transition.
 sub beforeSaveHandler {
     my ( $text, $topic, $web, $meta ) = @_;
 
     my $query = Foswiki::Func::getCgiQuery();
 
-# Check the the workflow permits a save operation.
-#    if ( !$query->param('INWORKFLOWSEQUENCE')
-#         && !$controlledTopic->canEdit() ) {
-#        throw Foswiki::OopsException(
-#            'accessdenied',
-#            def   => 'topic_access',
-#            web   => $_[2],
-#            topic => $_[1],
-#            params =>
-#              [ 'Save topic', 'You are not permitted to make this transition' ]
-#        );
-#        return 0;
-#   }
+    my %stateChangeInfo;
+    my $changingState = 1;
+    foreach my $p qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
+                     WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW) {
+        $stateChangeInfo{$p} = $query->param($p);
+        if (defined $stateChangeInfo{$p}) {
+            $query->delete($p);
+        } else {
+            # All params must be present to change state
+            return;
+        }
+    }
+
+    # See if we are expecting to apply a new state
+    if ($changingState) {
+        my ($wfw, $wft) = Foswiki::Func::normalizeWebTopicName(
+            undef, $stateChangeInfo{WORKFLOWWORKFLOW} );
+
+        # Can't use initTOPIC, because the data comes from the save
+        my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow(
+            $wfw, $wft );
+        my $controlledTopic =
+          new Foswiki::Plugins::WorkflowPlugin::ControlledTopic(
+              $workflow, $web, $topic, $meta, $text );
+
+        # The beforeSaveHandler has no way to abort the save,
+        # so we have to do a state change without a topic save.
+        $controlledTopic->changeState($stateChangeInfo{WORKFLOWPENDINGACTION});
+    }
 }
 
 1;
+__END__
+
+ Copyright (C) 2005 Thomas Hartkens <thomas@hartkens.de>
+ Copyright (C) 2005 Thomas Weigert <thomas.weigert@motorola.com>
+ Copyright (C) 2008-2010 Crawford Currie http://c-dot.co.uk
+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ as published by the Free Software Foundation; either version 2
+ of the License, or (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details, published at
+ http://www.gnu.org/copyleft/gpl.html
+

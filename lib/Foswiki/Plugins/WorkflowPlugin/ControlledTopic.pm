@@ -146,7 +146,8 @@ sub newForm {
     return ( $form && ( !$oldForm || $oldForm ne $form ) ) ? $form : undef;
 }
 
-# change the state of the topic, saving the updated topic
+# change the state of the topic. Does *not* save the updated topic, but
+# does notify the change to listeners.
 sub changeState {
     my ( $this, $action ) = @_;
 
@@ -168,6 +169,7 @@ sub changeState {
     $fmt =~ s/\$wikiusername/Foswiki::Func::getWikiUserName()/geo;
     $fmt =~ s/\$state/$this->getState()/goe;
     $fmt =~ s/\$date/$this->{state}->{"LASTTIME_$state"}/geo;
+    $fmt =~ s/\$rev/$this->{state}->{"LASTVERSION_$state"}/geo;
     if ( defined &Foswiki::Func::decodeFormatTokens ) {
 
         # Compatibility note: also expands $percnt etc.
@@ -186,11 +188,6 @@ sub changeState {
     if ($form) {
         $this->{meta}->put( "FORM", { name => $form } );
     }    # else leave the existing form in place
-
-    Foswiki::Func::saveTopic(
-        $this->{web}, $this->{topic}, $this->{meta},
-        $this->{text}, { minor => 1 }
-    );
 
     if ($notify) {
 
@@ -236,6 +233,16 @@ sub changeState {
     }
 
     return undef;
+}
+
+# Save the topic to the store
+sub save {
+    my $this = shift;
+
+    Foswiki::Func::saveTopic(
+        $this->{web}, $this->{topic}, $this->{meta},
+        $this->{text}, { minor => 1 }
+       );
 }
 
 sub expandMacros {
