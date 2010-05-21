@@ -25,6 +25,7 @@ our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
 our %cache;
+our $isStateChange;
 
 sub initPlugin {
     my ( $topic, $web ) = @_;
@@ -306,49 +307,6 @@ sub _WORKFLOWFORK {
 HTML
 }
 
-# Used to trap an edit and check that it is permitted by the workflow
-sub beforeEditHandler {
-    my ( $text, $topic, $web, $meta ) = @_;
-
-    my $controlledTopic = _initTOPIC( $web, $topic );
-    return '' unless $controlledTopic;
-
-    my $query = Foswiki::Func::getCgiQuery();
-    if ( !$query->param('INWORKFLOWSEQUENCE')
-           && !$controlledTopic->canEdit() ) {
-        throw Foswiki::OopsException(
-            'accessdenied',
-            status => 403,
-            def    => 'topic_access',
-            web    => $_[2],
-            topic  => $_[1],
-            params => [
-                'Edit topic',
-'You are not permitted to edit this topic. You have been denied access by Workflow Plugin'
-            ]
-        );
-    }
-}
-
-sub beforeAttachmentSaveHandler {
-    my ( $attrHashRef, $topic, $web ) = @_;
-    my $controlledTopic = _initTOPIC( $web, $topic );
-    return '' unless $controlledTopic;
-    if ( !$controlledTopic->canEdit() ) {
-        throw Foswiki::OopsException(
-            'accessdenied',
-            status => 403,
-            def    => 'topic_access',
-            web    => $_[2],
-            topic  => $_[1],
-            params => [
-                'Edit topic',
-'You are not permitted to attach to this topic. You have been denied access by Workflow Plugin'
-            ]
-        );
-    }
-}
-
 # Handle actions. REST handler, on changeState action.
 sub _changeState {
     my ($session) = @_;
@@ -412,7 +370,6 @@ sub _changeState {
 
     try {
         try {
-            $query->param( 'INWORKFLOWSEQUENCE' => 1 );
             if ($newForm) {
 
                 # If there is a form with the new state, and it's not
@@ -423,7 +380,6 @@ sub _changeState {
                 $url =
                   Foswiki::Func::getScriptUrl(
                       $web, $topic, 'edit',
-                      INWORKFLOWSEQUENCE    => time(),
                       breaklock             => $breaklock,
                       formtemplate          => $newForm,
                       # pass info about pending state change
@@ -438,6 +394,8 @@ sub _changeState {
             }
             else {
                 $controlledTopic->changeState($action);
+                # Flag that this is a state change to the beforeSaveHandler
+                local $isStateChange = 1;
                 $controlledTopic->save();
                 $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
             }
@@ -553,6 +511,67 @@ sub _restFork {
     Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext );
 }
 
+# Used to trap an edit and check that it is permitted by the workflow
+sub beforeEditHandler {
+    my ( $text, $topic, $web, $meta ) = @_;
+
+    # Check the state change parameters to see if this edit is
+    # part of a state change (state changes may be permitted even
+    # for users who can't edit, so we have to suppress the edit
+    # check in this case)
+    my $changingState = 1;
+    my $query = Foswiki::Func::getCgiQuery();
+    foreach my $p qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
+                     WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW) {
+        if (!defined $query->param($p)) {
+            # All params must be present to change state
+            $changingState = 0;
+            last;
+        }
+    }
+
+    return if $changingState; # permissions check not required
+
+    my $controlledTopic = _initTOPIC( $web, $topic );
+
+    return unless $controlledTopic; # not controlled, so check not required
+
+    unless ( $controlledTopic->canEdit() ) {
+        throw Foswiki::OopsException(
+            'accessdenied',
+            status => 403,
+            def    => 'topic_access',
+            web    => $_[2],
+            topic  => $_[1],
+            params => [
+                'Edit topic',
+'You are not permitted to edit this topic. You have been denied access by Workflow Plugin'
+            ]
+        );
+    }
+}
+
+# Check that the user is allowed to attach to the topic, if it is controlled
+sub beforeAttachmentSaveHandler {
+    my ( $attrHashRef, $topic, $web ) = @_;
+    my $controlledTopic = _initTOPIC( $web, $topic );
+    return unless $controlledTopic;
+
+    unless ( $controlledTopic->canEdit() ) {
+        throw Foswiki::OopsException(
+            'accessdenied',
+            status => 403,
+            def    => 'topic_access',
+            web    => $_[2],
+            topic  => $_[1],
+            params => [
+                'Edit topic',
+'You are not permitted to attach to this topic. You have been denied access by Workflow Plugin'
+            ]
+        );
+    }
+}
+
 # The beforeSaveHandler inspects the request parameters to see if the
 # right params are present to trigger a state change. The legality of
 # the state change is *not* checked - it's assumed that the change is
@@ -560,10 +579,15 @@ sub _restFork {
 sub beforeSaveHandler {
     my ( $text, $topic, $web, $meta ) = @_;
 
-    my $query = Foswiki::Func::getCgiQuery();
+    # $isStateChange is true if state has just been changed in this session.
+    # In this case we don't need the access check.
+    return if ($isStateChange);
 
-    my %stateChangeInfo;
+    # Otherwise we need to check if the packet of state change information
+    # is present.
+    my $query = Foswiki::Func::getCgiQuery();
     my $changingState = 1;
+    my %stateChangeInfo;
     foreach my $p qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
                      WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW) {
         $stateChangeInfo{$p} = $query->param($p);
@@ -571,25 +595,49 @@ sub beforeSaveHandler {
             $query->delete($p);
         } else {
             # All params must be present to change state
-            return;
+            $changingState = 0;
+            last;
         }
     }
 
-    # See if we are expecting to apply a new state
+    my $controlledTopic;
+
     if ($changingState) {
+        # See if we are expecting to apply a new state from query
+        # params
         my ($wfw, $wft) = Foswiki::Func::normalizeWebTopicName(
             undef, $stateChangeInfo{WORKFLOWWORKFLOW} );
 
         # Can't use initTOPIC, because the data comes from the save
         my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow(
             $wfw, $wft );
-        my $controlledTopic =
+        $controlledTopic =
           new Foswiki::Plugins::WorkflowPlugin::ControlledTopic(
               $workflow, $web, $topic, $meta, $text );
 
+    } else {
+        # Otherwise we are *not* changing state so we can use initTOPIC
+        $controlledTopic = _initTOPIC( $web, $topic );
+    }
+
+    return unless $controlledTopic;
+
+    if ($changingState) {
         # The beforeSaveHandler has no way to abort the save,
         # so we have to do a state change without a topic save.
         $controlledTopic->changeState($stateChangeInfo{WORKFLOWPENDINGACTION});
+    } elsif ( !$controlledTopic->canEdit() ) {
+        # Not a state change, make sure the AllowEdit in the state table
+        # permits this action
+        throw Foswiki::OopsException(
+            'accessdenied',
+            def   => 'topic_access',
+            web   => $_[2],
+            topic => $_[1],
+            params =>
+              [ 'Save topic',
+'You are not permitted to save this topic. You have been denied access by Workflow Plugin' ]
+             );
     }
 }
 

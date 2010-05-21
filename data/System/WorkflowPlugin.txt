@@ -18,7 +18,7 @@ A workflow can be associated with a single topic, or with an entire web. If a to
 <blockquote class="twikiAlert">
 *Upgrade note* If you are upgrading from a version before 10 Nov 2008 please note that the format of the WORKFLOWHISTORYFORMAT preference has changed slightly, in that:
    1 enclosing double quotes are no longer removed from the value. This changes has been to bring this preference definition into line with other preference definitions.
-   1 =$n= is interpreted as \n, not &lt;br&gt;, in line with the standard [[format tokens]]. If you want a &lt;br&gt; in the format string, then enter it as &lt;br&gt; or $percntBR$percnt.
+   1 =$n= is interpreted as \n, not &lt;br&gt;, in line with the standard [[%SYSTEMWEB%.FormatTokens][format tokens]]. If you want a &lt;br&gt; in the format string, then enter it as &lt;br&gt; or $percntBR$percnt.
 </blockquote>
 
 ---++ Usage
@@ -159,7 +159,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Plugin Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-| | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button |
+| | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
 |  03 Feb 2010: | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |
 |  19 Oct 2009: | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
 |  2 Sep 2009: | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. |

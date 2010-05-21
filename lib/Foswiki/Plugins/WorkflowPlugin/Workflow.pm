@@ -94,6 +94,7 @@ sub new {
             $inBlock = 0;
         }
     }
+    die "Invalid state table in $web.$topic" unless $this->{defaultState};
     return $this;
 }
 
