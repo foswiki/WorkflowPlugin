@@ -144,7 +144,7 @@ A common requirement is to report on the status of topics that are in different 
 
 This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and its first version (then called !ApprovalPlugin) was written by Thomas Hartkens, albeit it was focused on document approval and control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged the functionality of the [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this plugin.
 
----++ Plugin Installation Instructions
+---++ Installation Instructions
 
 %$INSTALL_INSTRUCTIONS%
 
@@ -154,12 +154,12 @@ Look at the examples in the !Sandbox web.
 
 __Note:__ For strict access control, the plugin should know who is looking at the controlled document/topic at all times.  To enable this, you may want to set up the wiki in such way that users have to log-in *even if they just display a topic*.
 
----++ Plugin Info
+---++ Info
 
 |  Author(s): | Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
-|  Plugin Version: | %$VERSION% |
+|  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-| | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
+|  26 May 2010: | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
 |  03 Feb 2010: | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |
 |  19 Oct 2009: | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
 |  2 Sep 2009: | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. |
@@ -175,16 +175,9 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  23 Apr 2008 | Crawford Currie: Removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
 |  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most installs do not allow .pl as extension and this creates problems when you want to update attachments |
 |  27 Jan 2008: | Markus Ueberall: Fixed for compatibility with TWiki 4.2.0 |
-|  10 Dec 2006: | Add =<nop>%WORKFLOWSTATE%=. |
-|  25 Sep 2006: | Restored ability to put workflow related tags into templates. Support the visual customization of the generated controls. |
-|  11463 | Crawford Currie rewrote the doc and corrected the install procedure |
-|  10 Aug 2006: | Added conversion script. |
-|  05 Aug 2006: | Converted from !ApprovalPlugin to %TOPIC%. |
-|  26 Jul 2006: | Minor bug fix. Additional examples provided. |
-|  25 Jul 2006: | Added state-based forms and history from Foswiki:Extensions/WorkFlowAddOn. Changed time stamp format to be more wiki like. |
-|  24 Jul 2006: | Ported to Dakar. Fixed problem in referencing previous versions. Fixed error messages. Fixed Documentation errors. |
-|  16 Feb 2005: | Initial version of !ApprovalPlugin |
-|  05 Feb 2004: | Initial version of !WorkFlowAddOn |
+|  05 Aug 2006: | Crawford Currie: Converted from !ApprovalPlugin to %TOPIC%. |
+|  16 Feb 2005: | Thomas Hartkens: Initial version of !ApprovalPlugin |
+|  05 Feb 2004: | Thomas Weigert Initial version of !WorkFlowAddOn |
 |  Home: | http://foswiki.org/Extensions/%TOPIC% |
 |  Support: | http://foswiki.org/Support/%TOPIC% |
 
