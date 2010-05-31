@@ -20,7 +20,7 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '26 May 2010';
+our $RELEASE          = '31 May 2010';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
@@ -495,7 +495,8 @@ sub _restFork {
             value => "<br>Forked from [[$forkWeb.$forkTopic]] by $who at $now",
         };
         $meta->put( "WORKFLOWHISTORY", $history );
-        Foswiki::Func::saveTopic($w, $t, $meta, $text);
+        Foswiki::Func::saveTopic($w, $t, $meta, $text,
+                                 { forcenewrevision => 1 });
     }
 
     my $history = $ttmeta->get('WORKFLOWHISTORY') || {};
@@ -508,7 +509,8 @@ sub _restFork {
                           { name => 'ALLOWTOPICCHANGE', value => 'nobody' });
     }
 
-    Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext );
+    Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext,
+                             { forcenewrevision => 1 });
 }
 
 # Used to trap an edit and check that it is permitted by the workflow

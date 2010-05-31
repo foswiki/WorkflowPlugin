@@ -122,6 +122,10 @@ sub expandWorkflowPreferences {
         if ( $key =~ m/^LASTVERSION_/ ) {
             my $foo = CGI::a( { href => "$url?rev=$val" }, "revision $val" );
             $_[0] =~ s/%WORKFLOW$key%/$foo/g;
+
+            # WORKFLOWLASTREV_
+            $key =~ s/VERSION/REV/;
+            $_[0] =~ s/%WORKFLOW$key%/$val/g;
         }
         elsif ( $key =~ /^LASTTIME_/ ) {
             $_[0] =~ s/%WORKFLOW$key%/$val/g;
@@ -241,7 +245,7 @@ sub save {
 
     Foswiki::Func::saveTopic(
         $this->{web}, $this->{topic}, $this->{meta},
-        $this->{text}, { minor => 1 }
+        $this->{text}, { forcenewrevision => 1 }
        );
 }
 

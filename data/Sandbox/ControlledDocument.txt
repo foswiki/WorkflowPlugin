@@ -9,6 +9,7 @@ Some controlled text.
 | State message | %WORKFLOWSTATEMESSAGE% |
 | Last time in APPROVED state | %WORKFLOWLASTTIME_APPROVED% |
 | Last version in APPROVED state | %WORKFLOWLASTVERSION_APPROVED% |
+| Last revision in APPROVED state | %WORKFLOWLASTREV_APPROVED% |
 
 Workflow history: %WORKFLOWHISTORY%
 
