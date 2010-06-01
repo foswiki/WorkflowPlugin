@@ -125,7 +125,8 @@ sub _WORKFLOWEDITTOPIC {
         return CGI::a(
             {
                 href => Foswiki::Func::getScriptUrl(
-                    $web, $topic, 'edit', t=> time),
+                    $web, $topic, 'edit',
+                    t => time() ),
             }, CGI::strong("Edit") );
     }
     else {
@@ -241,6 +242,7 @@ sub _WORKFLOWTRANSITION {
             )
         );
     }
+
     my $url = Foswiki::Func::getScriptUrl(
         $pluginName, 'changeState', 'rest' );
     my $form =
@@ -381,6 +383,7 @@ sub _changeState {
                   Foswiki::Func::getScriptUrl(
                       $web, $topic, 'edit',
                       breaklock             => $breaklock,
+                      t                     => time(),
                       formtemplate          => $newForm,
                       # pass info about pending state change
                       template              => 'workflowedit',
@@ -434,7 +437,7 @@ sub commonTagsHandler {
     if ( $controlledTopic ) {
 
         # show all tags defined by the preferences
-        my $url = Foswiki::Func::getScriptUrl( $web, $topic, "view" );
+        my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
         $controlledTopic->expandWorkflowPreferences( $url, $_[0] );
 
         return unless ( $controlledTopic->debugging() );
