@@ -20,7 +20,7 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '1 Jun 2010';
+our $RELEASE          = '15 Jun 2010';
 our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
@@ -268,6 +268,13 @@ sub _WORKFLOWSTATE {
 # Tag handler
 sub _WORKFLOWFORK {
     my ( $session, $attributes, $topic, $web ) = @_;
+
+    my $controlledTopic = _initTOPIC( $web, $topic );
+    return '' unless $controlledTopic;
+
+    # Check we can fork
+    return '' unless ($controlledTopic->canFork());
+
     my $newnames;
     if (!defined $attributes->{newnames}) {
         # Old interpretation, for compatibility

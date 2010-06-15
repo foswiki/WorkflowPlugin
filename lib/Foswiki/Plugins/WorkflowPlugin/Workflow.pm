@@ -29,10 +29,13 @@ use Foswiki::Plugins ();
 sub new {
     my ( $class, $web, $topic ) = @_;
 
-    $web = Foswiki::Sandbox::untaint(
-        $web, \&Foswiki::Sandbox::validateWebName );
-    $topic = Foswiki::Sandbox::untaint(
-        $topic, \&Foswiki::Sandbox::validateTopicName );
+    if (defined &Foswiki::Sandbox::untaint) {
+        $web = Foswiki::Sandbox::untaint(
+            $web, \&Foswiki::Sandbox::validateWebName );
+        $topic = Foswiki::Sandbox::untaint(
+            $topic, \&Foswiki::Sandbox::validateTopicName );
+    }
+
     return undef unless ($web && $topic);
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );

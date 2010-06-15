@@ -94,7 +94,6 @@ If a *Notify* column is given, that column can contain a comma-separated list of
 
 As described above the topic needs to contain a definition for the variable =WORKFLOW= for it to be controlled under the approval workflow. This is best set as a document-specific preference setting in the =More topic actions= screen.
 
-The plugin defines a number of preferences:
 %INCLUDE{VarWORKFLOW}%
 
 If you replace =%<nop>EDITTOPIC%= with =%<nop>WORKFLOWEDITTOPIC%= in your skin templates, then the _Edit_ link is crossed out when the user is not allowed to edit the page in a state.
@@ -133,13 +132,6 @@ A common requirement is to report on the status of topics that are in different 
 %SEARCH{"META:WORKFLOW.name='APPROVED'" type="query"}%
 </verbatim>
 
----++ Bugs
-
-   * You can attach a file to a contolled topic even if the state of the topic does not allow the user to edit it. In general, the plugin should prevent any changes to the topic in such case.
-   * If a transition attaches a form,
-      * the initial values are not taken from the form definition, due to the way the form initialization algorithm works.
-      * the state transition is performed before the new form is displayed for edit; cancelling the edit doesn't revert the state transition.
-
 ---++ History and Acknowledgements
 
 This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and its first version (then called !ApprovalPlugin) was written by Thomas Hartkens, albeit it was focused on document approval and control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged the functionality of the [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this plugin.
@@ -159,7 +151,8 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Author(s): | Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Version: | %$VERSION% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  1 Jun 2010 | Item9086: ensure t= is set on all edit links; also validate the workflow name. |
+|  15 Jun 2010 | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
+|  1 Jun 2010 | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
 |  31 May 2010: | Crawford Currie: Foswiki:Tasks.Item9072: add WORKFLOWLASTREV_State to show topic revision number Foswiki:Tasks.Item9081: force new topic revision on each state transition to avoid history loss |
 |  26 May 2010: | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
 |  03 Feb 2010: | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |

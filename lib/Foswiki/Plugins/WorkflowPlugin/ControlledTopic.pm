@@ -93,16 +93,43 @@ sub haveNextState {
     return $this->{workflow}->getNextState( $this, $action );
 }
 
+# Some day we may handle the can... functions indepedently. For now,
+# they all check editability thus....
+sub isModifyable {
+    my $this = shift;
+
+    return $this->{isEditable} if defined $this->{isEditable};
+
+    # See if the workflow allows an edit
+    unless (defined $this->{isEditable}) {
+        $this->{isEditable} = (
+            # Does the workflow permit editing?
+            $this->{workflow}->allowEdit($this)
+            # Does Foswiki permit editing?
+            && Foswiki::Func::checkAccessPermission(
+                'CHANGE', $Foswiki::Plugins::SESSION->{user},
+                $this->{text}, $this->{topic}, $this->{web},
+                $this->{meta})) ? 1 : 0;
+    }
+    return $this->{isEditable};
+}
+
 # Return tue if this topic is editable
 sub canEdit {
     my $this = shift;
-    return $this->{workflow}->allowEdit($this);
+    return $this->isModifyable($this);
 }
 
-# Return tue if this topic is attachable to
+# Return true if this topic is attachable to
 sub canAttach {
     my $this = shift;
-    return $this->{workflow}->allowEdit( $this );
+    return $this->isModifyable( $this );
+}
+
+# Return tue if this topic is forkable
+sub canFork {
+    my $this = shift;
+    return $this->isModifyable( $this );
 }
 
 # Expand miscellaneous preferences defined in the workflow and topic
