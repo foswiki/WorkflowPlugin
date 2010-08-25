@@ -57,50 +57,53 @@ sub new {
         },
         $class
     );
-    my $inBlock = 0;
+    my $inTable;
     my @fields;
 
-    # | *Current state* | *Action* | *Next state* | *Allowed* |
-    foreach ( split( /\n/, $text ) ) {
-        if (/^\s*\|[\s*]*State[\s*]*\|[\s*]*Action[\s*]*\|.*\|$/i) {
 
-            @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
-            shift @fields;
+    # Yet another table parser
+    # State table:
+    # | *State*       | *Allow Edit* | *Message* |
+    # Transition table:
+    # | *State* | *Action* | *Next state* | *Allowed* |
+    foreach my $line ( split( /\n/, $text ) ) {
+        if ($line =~ s/^\s*\|([\s*]*State[\s*]*\|
+                           [\s*]*Action[\s*]*\|.*)\|$/$1/ix) {
+            # Transition table header
+            @fields = map { _cleanField( $_ ) } split(/\s*\|\s*/, lc( $line ));
 
-            # from now on, we are in the TRANSITION table
-            $inBlock = 1;
+            $inTable = 'TRANSITION';
         }
-        elsif (/^\s*\|[\s*]*State[\s*]*\|[\s*]*Allow Edit[\s*]*\|.*\|$/i) {
+        elsif ($line =~ s/^\s*\|([\s*]*State[\s*]*\|
+                              [\s*]*Allow\s*Edit[\s*]*\|.*)\|$/$1/ix) {
+            # State table header
+            @fields = map { _cleanField( $_ ) } split(/\s*\|\s*/, lc( $line ));
 
-            @fields = map { _cleanField( lc($_) ) } split(/\s*\|\s*/);
-            shift @fields;
-
-            # from now on, we are in the STATE table
-            $inBlock = 2;
-
+            $inTable = 'STATE';
         }
-        elsif (/^(?:\t|   )+\*\sSet\s(\w+)\s=\s*(.*)$/) {
+        elsif ($line =~ /^(?:\t|   )+\*\sSet\s(\w+)\s=\s*(.*)$/) {
 
             # store preferences
             $this->{preferences}->{$1} = $2;
         }
-        elsif ( $inBlock == 1 && s/^\s*\|\s*// ) {
+        elsif ( defined($inTable) && $line =~ s/^\s*\|\s*(.*)\s*\|$/$1/ ) {
 
-            # read row in TRANSITION table
             my %data;
-            @data{@fields} = split(/\s*\|\s*/);
-            push( @{ $this->{transitions} }, \%data );
-        }
-        elsif ( $inBlock == 2 && s/^\s*\|\s*//o ) {
+            my $i = 0;
+            foreach my $col (split(/\s*\|\s*/, $line)) {
+                $data{$fields[$i++]} = $col;
+            }
 
-            # read row in STATE table
-            my %data;
-            @data{@fields} = split(/\s*\|\s*/);
-            $this->{defaultState} ||= $data{state};
-            $this->{states}->{ $data{state} } = \%data;
+            if ($inTable eq 'TRANSITION') {
+                push( @{ $this->{transitions} }, \%data );
+            } elsif ($inTable eq 'STATE') {
+                # read row in STATE table
+                $this->{defaultState} ||= $data{state};
+                $this->{states}->{ $data{state} } = \%data;
+            }
         }
         else {
-            $inBlock = 0;
+            undef $inTable;
         }
     }
     die "Invalid state table in $web.$topic" unless $this->{defaultState};
@@ -112,13 +115,13 @@ sub getActions {
     my ( $this, $topic ) = @_;
     my @actions      = ();
     my $currentState = $topic->getState();
-    foreach ( @{ $this->{transitions} } ) {
-        my $allowed = $topic->expandMacros( $_->{allowed} );
-        my $nextState = $topic->expandMacros( $_->{nextstate} );
-        if ( $_->{state} eq $currentState
+    foreach my $t ( @{ $this->{transitions} } ) {
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        my $nextState = $topic->expandMacros( $t->{nextstate} );
+        if ( $t->{state} eq $currentState
             && _isAllowed($allowed) && $nextState )
         {
-            push( @actions, $_->{action} );
+            push( @actions, $t->{action} );
         }
     }
     return @actions;
@@ -130,11 +133,11 @@ sub getActions {
 sub getNextState {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
-    foreach ( @{ $this->{transitions} } ) {
-        my $allowed = $topic->expandMacros( $_->{allowed} );
-        my $nextState = $topic->expandMacros( $_->{nextstate} );
-        if (   $_->{state} eq $currentState
-            && $_->{action} eq $action
+    foreach my $t ( @{ $this->{transitions} } ) {
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        my $nextState = $topic->expandMacros( $t->{nextstate} );
+        if (   $t->{state} eq $currentState
+            && $t->{action} eq $action
             && _isAllowed($allowed) && $nextState )
         {
             return $nextState;
@@ -149,13 +152,13 @@ sub getNextState {
 sub getNextForm {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
-    foreach ( @{ $this->{transitions} } ) {
-        my $allowed = $topic->expandMacros( $_->{allowed} );
-        if (   $_->{state} eq $currentState
-            && $_->{action} eq $action
+    foreach my $t ( @{ $this->{transitions} } ) {
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        if (   $t->{state} eq $currentState
+            && $t->{action} eq $action
             && _isAllowed($allowed) )
         {
-            return $_->{form};
+            return $t->{form};
         }
     }
     return undef;
@@ -167,13 +170,13 @@ sub getNextForm {
 sub getNotifyList {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
-    foreach ( @{ $this->{transitions} } ) {
-        my $allowed = $topic->expandMacros( $_->{allowed} );
-        if (   $_->{state} eq $currentState
-            && $_->{action} eq $action
+    foreach my $t ( @{ $this->{transitions} } ) {
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        if (   $t->{state} eq $currentState
+            && $t->{action} eq $action
             && _isAllowed( $allowed ) )
         {
-            return $_->{notify};
+            return $t->{notify};
         }
     }
     return undef;
@@ -264,20 +267,21 @@ sub _cleanField {
 sub stringify {
     my $this = shift;
 
+    my $t;
     my $s = "---+ Preferences\n";
-    foreach ( keys %{ $this->{preferences} } ) {
-        $s .= "| $_ | $this->{preferences}->{$_} |\n";
+    foreach $t ( keys %{ $this->{preferences} } ) {
+        $s .= "| $t | $this->{preferences}->{$t} |\n";
     }
     $s .= "\n---+ States\n| *State*       | *Allow Edit* | *Message* |\n";
-    foreach ( values %{ $this->{states} } ) {
-        $s .= "| $_->{state} | $_->{allowedit} | $_->{message} |\n";
+    foreach $t ( values %{ $this->{states} } ) {
+        $s .= "| $t->{state} | $t->{allowedit} | $t->{message} |\n";
     }
 
     $s .=
       "\n---+ Transitions\n| *State* | *Action* | *Next State* | *Allowed* |\n";
-    foreach ( @{ $this->{transitions} } ) {
+    foreach $t ( @{ $this->{transitions} } ) {
         $s .=
-          "| $_->{state} | $_->{action} | $_->{nextstate} |$_->{allowed} |\n";
+          "| $t->{state} | $t->{action} | $t->{nextstate} |$t->{allowed} |\n";
     }
     return $s;
 }

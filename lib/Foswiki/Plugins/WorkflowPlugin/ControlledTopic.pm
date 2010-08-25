@@ -283,9 +283,8 @@ sub expandMacros {
     # Workaround for Item1071
     my $memory = $c->{can_render_meta};
     $c->{can_render_meta} = $this->{meta};
-    $text =
-      Foswiki::Func::expandCommonVariables( $text, $this->{topic}, $this->{web},
-        $this->{meta} );
+    $text = Foswiki::Func::expandCommonVariables(
+        $text, $this->{topic}, $this->{web}, $this->{meta} );
     $c->{can_render_meta} = $memory;
     return $text;
 }

@@ -1,6 +1,6 @@
 ---+ %TOPIC%
 <!--
-   * Set SHORTDESCRIPTION = Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.
+   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
 -->
 <div style="float:right">
 %ATTACHURL%/Flow.gif
@@ -150,7 +150,9 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 |  Author(s): | Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
 |  Version: | %$VERSION% |
+|  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  25 Aug 2010 | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as in iterator control variable in your perl code. |
 |  15 Jun 2010 | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
 |  1 Jun 2010 | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
 |  31 May 2010: | Crawford Currie: Foswiki:Tasks.Item9072: add WORKFLOWLASTREV_State to show topic revision number Foswiki:Tasks.Item9081: force new topic revision on each state transition to avoid history loss |

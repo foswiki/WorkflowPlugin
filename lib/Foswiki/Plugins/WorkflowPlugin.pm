@@ -20,8 +20,8 @@ use Foswiki::OopsException ();
 use Foswiki::Sandbox ();
 
 our $VERSION          = '$Rev$';
-our $RELEASE          = '15 Jun 2010';
-our $SHORTDESCRIPTION = 'Supports work flows associated with topics';
+our $RELEASE          = '25 Aug 2010';
+our $SHORTDESCRIPTION = 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
 our $pluginName       = 'WorkflowPlugin';
 our %cache;
