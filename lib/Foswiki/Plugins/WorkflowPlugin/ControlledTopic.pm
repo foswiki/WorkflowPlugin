@@ -229,9 +229,27 @@ sub changeState {
         # Dig up the bodies
         my @persons = split( /\s*,\s*/, $notify );
         my @emails;
+        my @templates;
+        my $templatetext = undef;
+        my $currenttemplatetext = undef;
+        my $web = Foswiki::Func::expandCommonVariables('%WEB%');
+
         foreach my $who (@persons) {
             if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
                 push( @emails, $who );
+            }
+            elsif ( $who =~ /^template\((.*)\)$/ ) {
+                # Read template topic if provided one
+                my @webtopic = Foswiki::Func::normalizeWebTopicName($web, $1);
+                if (Foswiki::Func::topicExists($webtopic[0], $webtopic[1])){
+                    (undef, $currenttemplatetext) = Foswiki::Func::readTopic($webtopic[0], $webtopic[1]);
+                    push( @templates, $currenttemplatetext );
+                }
+                else {
+                    Foswiki::Func::writeWarning( __PACKAGE__
+                          . " cannot find topic '" . $webtopic[0] . "." . $webtopic[1]. "'"
+                          . " - this template will not be executed!" );
+                }
             }
             else {
                 $who =~ s/^.*\.//;    # web name?
@@ -247,11 +265,34 @@ sub changeState {
             }
         }
         if ( scalar(@emails) ) {
-
             # Have a list of recipients
-            my $text = Foswiki::Func::loadTemplate('mailworkflowtransition');
-            Foswiki::Func::setPreferencesValue( 'EMAILTO',
-                join( ', ', @emails ) );
+            my $defaulttemplate = undef;
+            my $text = undef;
+            my $currentweb = undef;
+            my $currenttopic = undef;
+
+            # See if this workflow has a custom default email template defined
+            $defaulttemplate = $this->{workflow}->{preferences}->{WORKFLOWDEFAULTEMAILTEMPLATE};
+            if ($defaulttemplate && ($defaulttemplate ne '') ) {
+                ($currentweb, $currenttopic) = Foswiki::Func::normalizeWebTopicName($web, $defaulttemplate);
+                if (Foswiki::Func::topicExists($currentweb, $currenttopic)){
+                    (undef, $text) = Foswiki::Func::readTopic($currentweb, $currenttopic);
+                } 
+                else {
+                    Foswiki::Func::writeWarning( __PACKAGE__
+                          . " cannot find topic '$currentweb.$currenttopic'"
+                          . " - falling back to default email template" );
+                }
+
+            }
+            # Otherwise, use the shipped default template
+            if (!$text || ($text eq '')) {
+            	$text = Foswiki::Func::loadTemplate('mailworkflowtransition');
+            }
+
+            my $tofield = join( ', ', @emails );
+
+            Foswiki::Func::setPreferencesValue( 'EMAILTO', $tofield );
             Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                 $this->getState() );
             $text = $this->expandMacros($text);
@@ -261,7 +302,22 @@ sub changeState {
                     'Failed to send transition mails: ' . $errors );
             }
         }
-    }
+        
+        if ( scalar(@templates)) {
+            foreach my $template ( @templates ) {
+                Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
+                    $this->getState() );
+                $template = $this->expandMacros($template);
+                my $errors = Foswiki::Func::sendEmail( $template, 5 );
+                if ($errors) {
+                    Foswiki::Func::writeWarning(
+                        'Failed to send transition mails: ' . $errors );
+                }
+            }
+        }        
+        
+    } #end notify
+
 
     return undef;
 }

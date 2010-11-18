@@ -79,7 +79,7 @@ Each row in this table defines a transition from one state to another state:
       corresponding action,
 	* an _optional_ *Form* column defines a form that is attached to
       the topic in this state.
-    * an _optional_ *Notify* column specifies who should be notified when this transition fires
+	* an _optional_ *Notify* column specifies who should be notified when this transition fires.
 
 In our example, anyone is allowed to revise the document when it is in =UNDERREVISION= state. After finishing the revision, the document can be transitioned to the =WAITINGFORQM= state by any member of the !QualityGroup. It must then be approved by the !QualityManager, and after that by the !TechnicalDirector. Even though they can't edit the document themselves (see state table above), they _can_ reject the revision and put the document back into the =UNDERREVISION= state. The !TechnicalDirector can transition the document to =APPROVED= state where it rests until a member of the !QualityGroup puts it under revision again.
 
@@ -88,9 +88,39 @@ If a form name is given in the *Form* column, this form will be attached to the 
    * If no form is given, the existing form (if any) is left in place.
 A typical usage of the form would be to collect additional information as the topic walks through the work flow, or to make information in the form unchangeable (by setting it to a =label= field) once a given state is reached.
 
-If a *Notify* column is given, that column can contain a comma-separated list of people who are to be notified when the transition is fired. You can specify individual user wiki names, group names, and even individual email addresses.
+If a *Notify* column is given, that column can contain a comma-separated list of notification targets to be informed when the transition is fired. You can specify values in any combination of the following formats:
+| *Format* | *Example* | *Notes* |
+| Email addresses | webmaster@example.com | |
+| User wiki names | Main.WikiGuest | |
+| Wiki group names | Main.AdminGroup | |
+| Email templates | =template(!Web.MyTopic)= | Must be wrapped in parentheses and proceeded by the word =template=, all lowercase, no spaces. |
 
----+++ Settings in your controlled document/topic
+When a transition is fired, any email addresses provided in the *Notify* column (or resolved from wiki/group names) will be notified, with a message formatted according to the default email template provided with the plugin.  You can override this template by setting the =WORKFLOWDEFAULTEMAILTEMPLATE= preference in your workflow description topic.  Set that to a topic that contains a valid email notification template (see example below), and all email addresses provided will receive messages formatted according to that template:
+
+<verbatim>
+From: %WIKIWEBMASTERNAME% <%WIKIWEBMASTER%>
+To: %EMAILTO%
+Cc:
+Subject: %WIKITOOLNAME%.%WEB%.%TOPIC% - transitioned to %TARGET_STATE%
+MIME-Version: 1.0
+Content-Type: text/plain
+%WIKINAME% has moved the topic %WEB%.%TOPIC% to the %TARGET_STATE% state.  You can view the document here:
+%SCRIPTURL{"view"}%/%WEB%/%TOPIC%
+</verbatim>
+
+Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body begining below the " =Content-Type: text/plain= " line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how WorkflowPlugin expands macros.
+
+For more sophisticated email notification, you can also write one or more custom email templates for each transition.  Email notification templates are *completely independent* of both the default email template and other email adresses or usernames provided in the *Notify* column for their transition.  Custom notification templates must provide valid headers that define their recipients, and they do not have access to the =EMAILTO= macro, so other email addresses provided will *not* be sent through custom templates (but they can still go out through the default email template).
+
+For example, the *Notify* column in the transition below will email =jim@example.com= using the default template, and execute both the =EmailOne= and =EmailTwo= templates, sending the results to whatever email addresses are defined on their respective =To=, =Cc=, or =Bcc= lines:
+<verbatim>
+| *State* | *Action* | *Next State* | *Allowed* |  *Notify*                                               |
+| PENDING | approve  |   APPROVED   |           | jim@example.com, template(EmailOne), template(EmailTwo) |
+</verbatim>
+
+*Note:* it's a good idea to avoid editing email notfication templates with a WYSIWYG editor, as they are somewhat fragile.  
+
+---+++ Settings in your controlled document/topic 
 
 As described above the topic needs to contain a definition for the variable =WORKFLOW= for it to be controlled under the approval workflow. This is best set as a document-specific preference setting in the =More topic actions= screen.
 
