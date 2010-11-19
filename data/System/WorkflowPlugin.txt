@@ -182,6 +182,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Version: | %$VERSION% |
 |  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  19 Nov 2010 | Foswiki:Tasks.Item10008: Implement support for custom email templates on state transition notifications. |
 |  25 Aug 2010 | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as in iterator control variable in your perl code. |
 |  15 Jun 2010 | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
 |  1 Jun 2010 | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
