@@ -23,7 +23,7 @@ package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
-use Foswiki (); # for regexes
+use Foswiki ();         # for regexes
 use Foswiki::Func ();
 
 # Constructor
@@ -101,15 +101,19 @@ sub isModifyable {
     return $this->{isEditable} if defined $this->{isEditable};
 
     # See if the workflow allows an edit
-    unless (defined $this->{isEditable}) {
+    unless ( defined $this->{isEditable} ) {
         $this->{isEditable} = (
+
             # Does the workflow permit editing?
             $this->{workflow}->allowEdit($this)
-            # Does Foswiki permit editing?
-            && Foswiki::Func::checkAccessPermission(
-                'CHANGE', $Foswiki::Plugins::SESSION->{user},
-                $this->{text}, $this->{topic}, $this->{web},
-                $this->{meta})) ? 1 : 0;
+
+              # Does Foswiki permit editing?
+              && Foswiki::Func::checkAccessPermission(
+                'CHANGE',      $Foswiki::Plugins::SESSION->{user},
+                $this->{text}, $this->{topic},
+                $this->{web},  $this->{meta}
+              )
+        ) ? 1 : 0;
     }
     return $this->{isEditable};
 }
@@ -123,13 +127,13 @@ sub canEdit {
 # Return true if this topic is attachable to
 sub canAttach {
     my $this = shift;
-    return $this->isModifyable( $this );
+    return $this->isModifyable($this);
 }
 
 # Return tue if this topic is forkable
 sub canFork {
     my $this = shift;
-    return $this->isModifyable( $this );
+    return $this->isModifyable($this);
 }
 
 # Expand miscellaneous preferences defined in the workflow and topic
@@ -151,7 +155,7 @@ sub expandWorkflowPreferences {
             $_[0] =~ s/%WORKFLOW$key%/$foo/g;
 
             # WORKFLOWLASTREV_
-            $key =~ s/VERSION/REV/;
+            $key  =~ s/VERSION/REV/;
             $_[0] =~ s/%WORKFLOW$key%/$val/g;
         }
         elsif ( $key =~ /^LASTTIME_/ ) {
@@ -187,13 +191,13 @@ sub changeState {
     my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
     my ( $revdate, $revuser, $version ) = $this->{meta}->getRevisionInfo();
-    if (ref($revdate) eq 'HASH') {
+    if ( ref($revdate) eq 'HASH' ) {
         my $info = $revdate;
         ( $revdate, $revuser, $version ) =
           ( $info->{date}, $info->{author}, $info->{version} );
     }
 
-    $this->setState($state, $version);
+    $this->setState( $state, $version );
 
     my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
       || '<br>$state -- $date';
@@ -230,26 +234,32 @@ sub changeState {
         my @persons = split( /\s*,\s*/, $notify );
         my @emails;
         my @templates;
-        my $templatetext = undef;
+        my $templatetext        = undef;
         my $currenttemplatetext = undef;
-        my $web = Foswiki::Func::expandCommonVariables('%WEB%');
+        my $web                 = Foswiki::Func::expandCommonVariables('%WEB%');
 
         foreach my $who (@persons) {
-        	$who =~ s/^\s*(.*?)\s*$/$1/; # trim whitespace
-        	Foswiki::Func::writeWarning( __PACKAGE__ . " Processing notify entry:  '$who'" );
+            $who =~ s/^\s*(.*?)\s*$/$1/;    # trim whitespace
+            Foswiki::Func::writeWarning(
+                __PACKAGE__ . " Processing notify entry:  '$who'" );
             if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
                 push( @emails, $who );
             }
             elsif ( $who =~ /^template\((.*)\)$/ ) {
+
                 # Read template topic if provided one
-                my @webtopic = Foswiki::Func::normalizeWebTopicName($web, $1);
-                if (Foswiki::Func::topicExists($webtopic[0], $webtopic[1])){
-                    (undef, $currenttemplatetext) = Foswiki::Func::readTopic($webtopic[0], $webtopic[1]);
+                my @webtopic = Foswiki::Func::normalizeWebTopicName( $web, $1 );
+                if ( Foswiki::Func::topicExists( $webtopic[0], $webtopic[1] ) )
+                {
+                    ( undef, $currenttemplatetext ) =
+                      Foswiki::Func::readTopic( $webtopic[0], $webtopic[1] );
                     push( @templates, $currenttemplatetext );
                 }
                 else {
                     Foswiki::Func::writeWarning( __PACKAGE__
-                          . " cannot find topic '" . $webtopic[0] . "." . $webtopic[1]. "'"
+                          . " cannot find topic '"
+                          . $webtopic[0] . "."
+                          . $webtopic[1] . "'"
                           . " - this template will not be executed!" );
                 }
             }
@@ -267,19 +277,25 @@ sub changeState {
             }
         }
         if ( scalar(@emails) ) {
+
             # Have a list of recipients
             my $defaulttemplate = undef;
-            my $text = undef;
-            my $currentweb = undef;
-            my $currenttopic = undef;
+            my $text            = undef;
+            my $currentweb      = undef;
+            my $currenttopic    = undef;
 
             # See if this workflow has a custom default email template defined
-            $defaulttemplate = $this->{workflow}->{preferences}->{WORKFLOWDEFAULTEMAILTEMPLATE};
-            if ($defaulttemplate && ($defaulttemplate ne '') ) {
-                ($currentweb, $currenttopic) = Foswiki::Func::normalizeWebTopicName($web, $defaulttemplate);
-                if (Foswiki::Func::topicExists($currentweb, $currenttopic)){
-                    (undef, $text) = Foswiki::Func::readTopic($currentweb, $currenttopic);
-                } 
+            $defaulttemplate =
+              $this->{workflow}->{preferences}->{WORKFLOWDEFAULTEMAILTEMPLATE};
+            if ( $defaulttemplate && ( $defaulttemplate ne '' ) ) {
+                ( $currentweb, $currenttopic ) =
+                  Foswiki::Func::normalizeWebTopicName( $web,
+                    $defaulttemplate );
+                if ( Foswiki::Func::topicExists( $currentweb, $currenttopic ) )
+                {
+                    ( undef, $text ) =
+                      Foswiki::Func::readTopic( $currentweb, $currenttopic );
+                }
                 else {
                     Foswiki::Func::writeWarning( __PACKAGE__
                           . " cannot find topic '$currentweb.$currenttopic'"
@@ -287,9 +303,10 @@ sub changeState {
                 }
 
             }
+
             # Otherwise, use the shipped default template
-            if (!$text || ($text eq '')) {
-            	$text = Foswiki::Func::loadTemplate('mailworkflowtransition');
+            if ( !$text || ( $text eq '' ) ) {
+                $text = Foswiki::Func::loadTemplate('mailworkflowtransition');
             }
 
             my $tofield = join( ', ', @emails );
@@ -304,9 +321,9 @@ sub changeState {
                     'Failed to send transition mails: ' . $errors );
             }
         }
-        
-        if ( scalar(@templates)) {
-            foreach my $template ( @templates ) {
+
+        if ( scalar(@templates) ) {
+            foreach my $template (@templates) {
                 Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                     $this->getState() );
                 $template = $this->expandMacros($template);
@@ -316,10 +333,9 @@ sub changeState {
                         'Failed to send transition mails: ' . $errors );
                 }
             }
-        }        
-        
-    } #end notify
+        }
 
+    }    #end notify
 
     return undef;
 }
@@ -328,10 +344,8 @@ sub changeState {
 sub save {
     my $this = shift;
 
-    Foswiki::Func::saveTopic(
-        $this->{web}, $this->{topic}, $this->{meta},
-        $this->{text}, { forcenewrevision => 1 }
-       );
+    Foswiki::Func::saveTopic( $this->{web}, $this->{topic}, $this->{meta},
+        $this->{text}, { forcenewrevision => 1 } );
 }
 
 sub expandMacros {
@@ -341,8 +355,9 @@ sub expandMacros {
     # Workaround for Item1071
     my $memory = $c->{can_render_meta};
     $c->{can_render_meta} = $this->{meta};
-    $text = Foswiki::Func::expandCommonVariables(
-        $text, $this->{topic}, $this->{web}, $this->{meta} );
+    $text =
+      Foswiki::Func::expandCommonVariables( $text, $this->{topic}, $this->{web},
+        $this->{meta} );
     $c->{can_render_meta} = $memory;
     return $text;
 }
