@@ -235,6 +235,8 @@ sub changeState {
         my $web = Foswiki::Func::expandCommonVariables('%WEB%');
 
         foreach my $who (@persons) {
+        	$who =~ s/^\s*(.*?)\s*$/$1/; # trim whitespace
+        	Foswiki::Func::writeWarning( __PACKAGE__ . " Processing notify entry:  '$who'" );
             if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
                 push( @emails, $who );
             }
