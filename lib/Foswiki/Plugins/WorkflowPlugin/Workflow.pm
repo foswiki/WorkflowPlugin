@@ -86,7 +86,7 @@ sub new {
             # store preferences
             $this->{preferences}->{$1} = $2;
         }
-        elsif ( defined($inTable) && $line =~ s/^\s*\|\s*(.*)\s*\|$/$1/ ) {
+        elsif ( defined($inTable) && $line =~ s/^\s*\|\s*(.*?)\s*\|$/$1/ ) {
 
             my %data;
             my $i = 0;
