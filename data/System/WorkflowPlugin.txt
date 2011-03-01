@@ -182,24 +182,25 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Version: | %$VERSION% |
 |  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  19 Nov 2010 | Foswiki:Tasks.Item10008: Implement support for custom email templates on state transition notifications. |
-|  25 Aug 2010 | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as in iterator control variable in your perl code. |
-|  15 Jun 2010 | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
-|  1 Jun 2010 | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
-|  31 May 2010: | Crawford Currie: Foswiki:Tasks.Item9072: add WORKFLOWLASTREV_State to show topic revision number Foswiki:Tasks.Item9081: force new topic revision on each state transition to avoid history loss |
-|  26 May 2010: | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
-|  03 Feb 2010: | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |
-|  19 Oct 2009: | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
-|  2 Sep 2009: | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. |
-|  3 Jun 2009: | Foswiki:Tasks.Item8172: Dean Spicer added support for cross-topic state and history queries |
-|  29 Apr 2009: | Foswiki:Tasks.Item8147: fix version recording |
-|  23 Apr 2009: | Foswiki:Tasks.Item1503: fix collection of notify addresses |
-|  9 Apr 2009: | Foswiki:Tasks.Item8107: block transition if topic is being edited by another user |
-|  21 Mar 2009: | Dean Spicer/Crawford Currie: Foswiki:Tasks.Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
-|  20 Mar 2009 | Crawford Currie: Foswiki:Tasks.Item8069: deny attach on a controlled topic Foswiki:Tasks.Item8070: expand macros in Allow and AllowEdit fields |
-|  11 Dec 2008 | Crawford Currie: Foswiki:Tasks.Item8029: support notification of a list of people on state changes |
-|  15 Nov 2008 | Crawford Currie: Foswiki:Tasks.Item6114: Fixed format of history Foswiki:Tasks.Item6119: added !InProcessForm and increased defensiveness in a couple of places |
-|  10 Nov 2008 | Crawford Currie: Heavily refactored to OO style to ease maintenance. Ensure form is saved when state changes. Support use of '. Split off VarWORKFLOW documentation. Removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
+|  1.12.1 (01 Mar 2011) | Foswikitask:Item10356: Correct parsing of trailing spaces in state and transition tables |
+|  1.12 (23 Feb 2011) | Foswiki:Tasks.Item10008: Implement support for custom email templates on state transition notifications. |
+|  1.11.1 (25 Aug 2010) | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as an iterator control variable in your perl code. |
+|  1.11 (15 Jun 2010) | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
+|  1.10 (01 Jun 2010) | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
+|  1.9 (31 May 2010) | Crawford Currie: Foswiki:Tasks.Item9072: add WORKFLOWLASTREV_State to show topic revision number Foswiki:Tasks.Item9081: force new topic revision on each state transition to avoid history loss |
+|  1.8.1 (27 May 2010) | Crawford Currie: Foswiki:Tasks.Item9048: Minor doc update |
+|  1.8 (26 May 2010) | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
+|  1.7.1 (03 Feb 2010) | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |
+|  1.7 (04 Nov 2009) | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
+|  1.6 (02 Sep 2009) | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. Foswiki:Tasks.Item8172: Dean Spicer added support for cross-topic state and history queries |
+|  1.5.2 (29 Apr 2009) | Foswiki:Tasks.Item8147: fix version recording |
+|  1.5.1 (23 Apr 2009) | Foswiki:Tasks.Item1503: fix collection of notify addresses |
+|  1.5 (09 Apr 2009) | Foswiki:Tasks.Item8107: block transition if topic is being edited by another user |
+|  1.4 (21 Mar 2009) | Dean Spicer/Crawford Currie: Foswiki:Tasks.Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
+|  1.3 (03 Mar 2009) | Crawford Currie: Foswiki:Tasks.Item8069: deny attach on a controlled topic Foswiki:Tasks.Item8070: expand macros in Allow and AllowEdit fields |
+|  1.2 (11 Dec 2008) | Crawford Currie: Foswiki:Tasks.Item8029: support notification of a list of people on state changes |
+|  1.1 (15 Nov 2008) | Crawford Currie: Foswiki:Tasks.Item6114: Fixed format of history Foswiki:Tasks.Item6119: added !InProcessForm and increased defensiveness in a couple of places |
+|  1.0 (10 Nov 2008) | Crawford Currie: Heavily refactored to OO style to ease maintenance. Ensure form is saved when state changes. Support use of '. Split off VarWORKFLOW documentation. Removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
 |  23 Apr 2008 | Crawford Currie: Removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
 |  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most installs do not allow .pl as extension and this creates problems when you want to update attachments |
 |  27 Jan 2008: | Markus Ueberall: Fixed for compatibility with TWiki 4.2.0 |
