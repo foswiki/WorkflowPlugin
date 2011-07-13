@@ -13,17 +13,18 @@ use strict;
 use Error ':try';
 use Assert;
 
-use Foswiki::Func ();
-use Foswiki::Plugins::WorkflowPlugin::Workflow ();
+use Foswiki::Func                                     ();
+use Foswiki::Plugins::WorkflowPlugin::Workflow        ();
 use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
-use Foswiki::OopsException ();
-use Foswiki::Sandbox ();
+use Foswiki::OopsException                            ();
+use Foswiki::Sandbox                                  ();
 
-our $VERSION          = '$Rev$';
-our $RELEASE          = '1.12.1';
-our $SHORTDESCRIPTION = 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
+our $VERSION = '$Rev$';
+our $RELEASE = '1.12.1';
+our $SHORTDESCRIPTION =
+'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
-our $pluginName       = 'WorkflowPlugin';
+our $pluginName        = 'WorkflowPlugin';
 our %cache;
 our $isStateChange;
 
@@ -34,25 +35,26 @@ sub initPlugin {
 
     Foswiki::Func::registerRESTHandler(
         'changeState', \&_changeState,
-        authenticate => 1, http_allow => 'POST' );
+        authenticate => 1,
+        http_allow   => 'POST'
+    );
     Foswiki::Func::registerRESTHandler(
         'fork', \&_restFork,
-        authenticate => 1, http_allow => 'POST' );
+        authenticate => 1,
+        http_allow   => 'POST'
+    );
 
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWSTATE', \&_WORKFLOWSTATE );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWEDITTOPIC', \&_WORKFLOWEDITTOPIC );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWATTACHTOPIC', \&_WORKFLOWATTACHTOPIC );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWSTATEMESSAGE', \&_WORKFLOWSTATEMESSAGE );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWTRANSITION', \&_WORKFLOWTRANSITION );
-    Foswiki::Func::registerTagHandler(
-        'WORKFLOWFORK', \&_WORKFLOWFORK );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWSTATE', \&_WORKFLOWSTATE );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWEDITTOPIC',
+        \&_WORKFLOWEDITTOPIC );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWATTACHTOPIC',
+        \&_WORKFLOWATTACHTOPIC );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWSTATEMESSAGE',
+        \&_WORKFLOWSTATEMESSAGE );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWTRANSITION',
+        \&_WORKFLOWTRANSITION );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWFORK', \&_WORKFLOWFORK );
 
     return 1;
 }
@@ -61,19 +63,21 @@ sub initPlugin {
 sub _initTOPIC {
     my ( $web, $topic ) = @_;
 
-    ( $web, $topic ) =
-      Foswiki::Func::normalizeWebTopicName( $web, $topic );
+    ( $web, $topic ) = Foswiki::Func::normalizeWebTopicName( $web, $topic );
 
     my $controlledTopic = $cache{"$web.$topic"};
     return $controlledTopic if $controlledTopic;
 
-    if (defined &Foswiki::Func::isValidTopicName) {
+    if ( defined &Foswiki::Func::isValidTopicName ) {
+
         # Allow non-wikiwords
         return undef unless Foswiki::Func::isValidTopicName( $topic, 1 );
-    } else {
+    }
+    else {
+
         # (tm)wiki doesn't have isValidTopicName
         # best we can do
-        return undef unless Foswiki::Func::isValidWikiWord( $topic );
+        return undef unless Foswiki::Func::isValidWikiWord($topic);
     }
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
@@ -86,8 +90,7 @@ sub _initTOPIC {
         ( my $wfWeb, $workflowName ) =
           Foswiki::Func::normalizeWebTopicName( $web, $workflowName );
 
-        return undef unless Foswiki::Func::topicExists(
-            $wfWeb, $workflowName );
+        return undef unless Foswiki::Func::topicExists( $wfWeb, $workflowName );
 
         my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
             $workflowName );
@@ -105,10 +108,9 @@ sub _initTOPIC {
 }
 
 sub _getTopicName {
-    my ($attributes, $web, $topic) = @_;
+    my ( $attributes, $web, $topic ) = @_;
 
-    return Foswiki::Func::normalizeWebTopicName(
-        $attributes->{web} || $web,
+    return Foswiki::Func::normalizeWebTopicName( $attributes->{web} || $web,
         $attributes->{_DEFAULT} || $topic );
 }
 
@@ -116,7 +118,7 @@ sub _getTopicName {
 sub _WORKFLOWEDITTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -125,9 +127,11 @@ sub _WORKFLOWEDITTOPIC {
         return CGI::a(
             {
                 href => Foswiki::Func::getScriptUrl(
-                    $web, $topic, 'edit',
-                    t => time() ),
-            }, CGI::strong("Edit") );
+                    $web, $topic, 'edit', t => time()
+                ),
+            },
+            CGI::strong("Edit")
+        );
     }
     else {
         return CGI::strike("Edit");
@@ -138,7 +142,7 @@ sub _WORKFLOWEDITTOPIC {
 sub _WORKFLOWSTATEMESSAGE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -149,7 +153,7 @@ sub _WORKFLOWSTATEMESSAGE {
 sub _WORKFLOWATTACHTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -173,7 +177,7 @@ sub _WORKFLOWATTACHTOPIC {
 sub _WORKFLOWHISTORY {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -184,7 +188,7 @@ sub _WORKFLOWHISTORY {
 sub _WORKFLOWTRANSITION {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -196,28 +200,33 @@ sub _WORKFLOWTRANSITION {
     my $cs              = $controlledTopic->getState();
 
     unless ($numberOfActions) {
-        return '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state '
-          .$cs.'</span>' if $controlledTopic->debugging();
+        return
+            '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state ' 
+          . $cs
+          . '</span>'
+          if $controlledTopic->debugging();
         return '';
     }
 
     my @fields = (
         "<input type='hidden' name='WORKFLOWSTATE' value='$cs' />",
+
         # Can't use CGI because a top parameter could defeat the value we need
         "<input type='hidden' name='topic' value='$web.$topic' />",
-        
+
         # Use a time field to help defeat the cache
-        "<input type='hidden' name='t' value='".time()."' />"
-       );
-    
+        "<input type='hidden' name='t' value='" . time() . "' />"
+    );
+
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
-          || 'foswikiChangeFormButton foswikiSubmit"';
-    
+      || 'foswikiChangeFormButton foswikiSubmit"';
+
     if ( $numberOfActions == 1 ) {
         push( @fields,
-              "<input type='hidden' name='WORKFLOWACTION' value='"
-                .$actions[0]."' />" );
+                "<input type='hidden' name='WORKFLOWACTION' value='"
+              . $actions[0]
+              . "' />" );
         push(
             @fields,
             CGI::submit(
@@ -243,8 +252,7 @@ sub _WORKFLOWTRANSITION {
         );
     }
 
-    my $url = Foswiki::Func::getScriptUrl(
-        $pluginName, 'changeState', 'rest' );
+    my $url = Foswiki::Func::getScriptUrl( $pluginName, 'changeState', 'rest' );
     my $form =
         CGI::start_form( -method => 'POST', -action => $url )
       . join( '', @fields )
@@ -258,7 +266,7 @@ sub _WORKFLOWTRANSITION {
 sub _WORKFLOWSTATE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my $controlledTopic = _initTOPIC( $web, $topic );
     return '' unless $controlledTopic;
 
@@ -273,29 +281,32 @@ sub _WORKFLOWFORK {
     return '' unless $controlledTopic;
 
     # Check we can fork
-    return '' unless ($controlledTopic->canFork());
+    return '' unless ( $controlledTopic->canFork() );
 
     my $newnames;
-    if (!defined $attributes->{newnames}) {
+    if ( !defined $attributes->{newnames} ) {
+
         # Old interpretation, for compatibility
         $newnames = $attributes->{_DEFAULT};
         $topic = $attributes->{topic} || $topic;
-    } else {
-        ($web, $topic) = _getTopicName($attributes, $web, $topic);
+    }
+    else {
+        ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
         $newnames = $attributes->{newnames};
     }
     return '' unless $newnames;
-    my $lockdown = Foswiki::Func::isTrue($attributes->{lockdown});
+    my $lockdown = Foswiki::Func::isTrue( $attributes->{lockdown} );
 
-    if (!Foswiki::Func::topicExists($web, $topic)) {
-        return "<span class='foswikiAlert'>WORKFLOWFORK: '$topic' does not exist</span>";
+    if ( !Foswiki::Func::topicExists( $web, $topic ) ) {
+        return
+"<span class='foswikiAlert'>WORKFLOWFORK: '$topic' does not exist</span>";
     }
     my $errors = '';
-    foreach my $newname ( split(',', $newnames ) ) {
-        my ($w, $t) =
-          Foswiki::Func::normalizeWebTopicName( $web, $newname );
-        if (Foswiki::Func::topicExists($w, $t)) {
-            $errors .= "<span class='foswikiAlert'>WORKFLOWFORK: $w.$t exists</span><br />";
+    foreach my $newname ( split( ',', $newnames ) ) {
+        my ( $w, $t ) = Foswiki::Func::normalizeWebTopicName( $web, $newname );
+        if ( Foswiki::Func::topicExists( $w, $t ) ) {
+            $errors .=
+"<span class='foswikiAlert'>WORKFLOWFORK: $w.$t exists</span><br />";
         }
     }
     return $errors if $errors;
@@ -304,7 +315,7 @@ sub _WORKFLOWFORK {
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
       || 'foswikiChangeFormButton foswikiSubmit"';
-    my $url = Foswiki::Func::getScriptUrl( 'WorkflowPlugin', 'fork', 'rest');
+    my $url = Foswiki::Func::getScriptUrl( 'WorkflowPlugin', 'fork', 'rest' );
     return <<HTML;
 <form name='forkWorkflow' action='$url' method="POST">
 <input type='hidden' name='topic' value='$web.$topic' />
@@ -336,8 +347,8 @@ sub _changeState {
             template => "oopssaveerr",
             param1   => "Could not initialise workflow for "
               . ( $web   || '' ) . '.'
-                . ( $topic || '' )
-               );
+              . ( $topic || '' )
+        );
         Foswiki::Func::redirectCgiQuery( undef, $url );
         return undef;
     }
@@ -346,23 +357,23 @@ sub _changeState {
     my $state  = $query->param('WORKFLOWSTATE');
     die "BAD STATE $action $state!=", $controlledTopic->getState()
       unless $action
-        && $state
+          && $state
           && $state eq $controlledTopic->getState()
-            && $controlledTopic->haveNextState($action);
+          && $controlledTopic->haveNextState($action);
 
     my $newForm = $controlledTopic->newForm($action);
 
     # Check that no-one else has a lease on the topic
     my $breaklock = $query->param('breaklock');
-    unless (Foswiki::Func::isTrue($breaklock)) {
-        my ( $url, $loginName, $t ) = Foswiki::Func::checkTopicEditLock(
-            $web, $topic );
-        if ( $t ) {
+    unless ( Foswiki::Func::isTrue($breaklock) ) {
+        my ( $url, $loginName, $t ) =
+          Foswiki::Func::checkTopicEditLock( $web, $topic );
+        if ($t) {
             my $currUser = Foswiki::Func::getCanonicalUserID();
-            my $locker = Foswiki::Func::getCanonicalUserID($loginName);
-            if ($locker ne $currUser) {
-                $t = Foswiki::Time::formatDelta(
-                    $t, $Foswiki::Plugins::SESSION->i18n );
+            my $locker   = Foswiki::Func::getCanonicalUserID($loginName);
+            if ( $locker ne $currUser ) {
+                $t = Foswiki::Time::formatDelta( $t,
+                    $Foswiki::Plugins::SESSION->i18n );
                 $url = Foswiki::Func::getScriptUrl(
                     $web, $topic, 'oops',
                     template => 'oopswfplease',
@@ -370,7 +381,7 @@ sub _changeState {
                     param2   => $t,
                     param3   => $state,
                     param4   => $action,
-                   );
+                );
                 Foswiki::Func::redirectCgiQuery( undef, $url );
                 return undef;
             }
@@ -386,24 +397,24 @@ sub _changeState {
                 # mode to support form field changes. In this case the
                 # transition is delayed until after the edit is saved
                 # (the transition is executed by the beforeSaveHandler)
-                $url =
-                  Foswiki::Func::getScriptUrl(
-                      $web, $topic, 'edit',
-                      breaklock             => $breaklock,
-                      t                     => time(),
-                      formtemplate          => $newForm,
-                      # pass info about pending state change
-                      template              => 'workflowedit',
-                      WORKFLOWPENDINGACTION => $action,
-                      WORKFLOWCURRENTSTATE  => $state,
-                      WORKFLOWPENDINGSTATE  =>
-                        $controlledTopic->haveNextState($action),
-                      WORKFLOWWORKFLOW      =>
-                        $controlledTopic->{workflow}->{name},
-                     );
+                $url = Foswiki::Func::getScriptUrl(
+                    $web, $topic, 'edit',
+                    breaklock    => $breaklock,
+                    t            => time(),
+                    formtemplate => $newForm,
+
+                    # pass info about pending state change
+                    template              => 'workflowedit',
+                    WORKFLOWPENDINGACTION => $action,
+                    WORKFLOWCURRENTSTATE  => $state,
+                    WORKFLOWPENDINGSTATE =>
+                      $controlledTopic->haveNextState($action),
+                    WORKFLOWWORKFLOW => $controlledTopic->{workflow}->{name},
+                );
             }
             else {
                 $controlledTopic->changeState($action);
+
                 # Flag that this is a state change to the beforeSaveHandler
                 local $isStateChange = 1;
                 $controlledTopic->save();
@@ -411,16 +422,18 @@ sub _changeState {
             }
 
             Foswiki::Func::redirectCgiQuery( undef, $url );
-        } catch Error::Simple with {
+        }
+        catch Error::Simple with {
             my $error = shift;
             throw Foswiki::OopsException(
                 'oopssaveerr',
                 web    => $web,
                 topic  => $topic,
                 params => [ $error || '?' ]
-               );
+            );
         };
-    } catch Foswiki::OopsException with {
+    }
+    catch Foswiki::OopsException with {
         my $e = shift;
         if ( $e->can('generate') ) {
             $e->generate($session);
@@ -441,7 +454,7 @@ sub commonTagsHandler {
 
     my $controlledTopic = _initTOPIC( $web, $topic );
 
-    if ( $controlledTopic ) {
+    if ($controlledTopic) {
 
         # show all tags defined by the preferences
         my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
@@ -455,43 +468,44 @@ sub commonTagsHandler {
 }
 
 sub _restFork {
-    my ($session) = @_; 
-    # Update the history in the template topic and the new topic
-    my $query = Foswiki::Func::getCgiQuery();
-    my $forkTopic = $query->param('topic');
-    my @newnames = split(/,/, $query->param('newnames'));
-    my $lockdown = $query->param('lockdown');
+    my ($session) = @_;
 
-    (my $forkWeb, $forkTopic) =
+    # Update the history in the template topic and the new topic
+    my $query     = Foswiki::Func::getCgiQuery();
+    my $forkTopic = $query->param('topic');
+    my @newnames  = split( /,/, $query->param('newnames') );
+    my $lockdown  = $query->param('lockdown');
+
+    ( my $forkWeb, $forkTopic ) =
       Foswiki::Func::normalizeWebTopicName( undef, $forkTopic );
 
     if ( Foswiki::Func::topicExists( $forkWeb, $forkTopic ) ) {
+
         # Validated
-        $forkWeb =
-          Foswiki::Sandbox::untaintUnchecked( $forkWeb );
-        $forkTopic =
-          Foswiki::Sandbox::untaintUnchecked( $forkTopic );
+        $forkWeb   = Foswiki::Sandbox::untaintUnchecked($forkWeb);
+        $forkTopic = Foswiki::Sandbox::untaintUnchecked($forkTopic);
     }
 
-    my ($ttmeta, $tttext) = Foswiki::Func::readTopic(
-        $forkWeb, $forkTopic);
+    my ( $ttmeta, $tttext ) = Foswiki::Func::readTopic( $forkWeb, $forkTopic );
 
     my $now = Foswiki::Func::formatTime( time(), undef, 'servertime' );
     my $who = Foswiki::Func::getWikiUserName();
 
     # create the new topics
-    foreach my $newname ( @newnames ) {
-        $newname =
-          Foswiki::Sandbox::untaintUnchecked( $newname );
-        my ($w, $t) =
+    foreach my $newname (@newnames) {
+        $newname = Foswiki::Sandbox::untaintUnchecked($newname);
+        my ( $w, $t ) =
           Foswiki::Func::normalizeWebTopicName( $forkWeb, $newname );
-        if (Foswiki::Func::topicExists($w, $t)) {
-            return "<span class='foswikiAlert'>WORKFLOWFORK: '$w.$t' already exists</span>";
+        if ( Foswiki::Func::topicExists( $w, $t ) ) {
+            return
+"<span class='foswikiAlert'>WORKFLOWFORK: '$w.$t' already exists</span>";
         }
         my $text = $tttext;
-        my $meta = new Foswiki::Meta($session, $w, $t);
+        my $meta = new Foswiki::Meta( $session, $w, $t );
+
         # Clone the template
         foreach my $k ( keys %$ttmeta ) {
+
             # Note that we don't carry over the history from the forked topic
             next if ( $k =~ /^_/ || $k eq 'WORKFLOWHISTORY' );
             my @data;
@@ -501,26 +515,28 @@ sub _restFork {
             }
             $meta->putAll( $k, @data );
         }
-        my $history = {
-            value => "<br>Forked from [[$forkWeb.$forkTopic]] by $who at $now",
-        };
+        my $history =
+          { value => "<br>Forked from [[$forkWeb.$forkTopic]] by $who at $now",
+          };
         $meta->put( "WORKFLOWHISTORY", $history );
-        Foswiki::Func::saveTopic($w, $t, $meta, $text,
-                                 { forcenewrevision => 1 });
+        Foswiki::Func::saveTopic( $w, $t, $meta, $text,
+            { forcenewrevision => 1 } );
     }
 
     my $history = $ttmeta->get('WORKFLOWHISTORY') || {};
-    $history->{value} .= "<br>Forked to " .
-      join(', ', map { "[[$forkWeb.$_]]" } @newnames). " by $who at $now";
+    $history->{value} .=
+        "<br>Forked to "
+      . join( ', ', map { "[[$forkWeb.$_]]" } @newnames )
+      . " by $who at $now";
     $ttmeta->put( "WORKFLOWHISTORY", $history );
 
     if ($lockdown) {
-        $ttmeta->putKeyed("PREFERENCE",
-                          { name => 'ALLOWTOPICCHANGE', value => 'nobody' });
+        $ttmeta->putKeyed( "PREFERENCE",
+            { name => 'ALLOWTOPICCHANGE', value => 'nobody' } );
     }
 
     Foswiki::Func::saveTopic( $forkWeb, $forkTopic, $ttmeta, $tttext,
-                             { forcenewrevision => 1 });
+        { forcenewrevision => 1 } );
 }
 
 # Used to trap an edit and check that it is permitted by the workflow
@@ -532,21 +548,25 @@ sub beforeEditHandler {
     # for users who can't edit, so we have to suppress the edit
     # check in this case)
     my $changingState = 1;
-    my $query = Foswiki::Func::getCgiQuery();
-    foreach my $p (qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
-                     WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW)) {
-        if (!defined $query->param($p)) {
+    my $query         = Foswiki::Func::getCgiQuery();
+    foreach my $p (
+        qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
+        WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW)
+      )
+    {
+        if ( !defined $query->param($p) ) {
+
             # All params must be present to change state
             $changingState = 0;
             last;
         }
     }
 
-    return if $changingState; # permissions check not required
+    return if $changingState;    # permissions check not required
 
     my $controlledTopic = _initTOPIC( $web, $topic );
 
-    return unless $controlledTopic; # not controlled, so check not required
+    return unless $controlledTopic;    # not controlled, so check not required
 
     unless ( $controlledTopic->canEdit() ) {
         throw Foswiki::OopsException(
@@ -597,15 +617,20 @@ sub beforeSaveHandler {
 
     # Otherwise we need to check if the packet of state change information
     # is present.
-    my $query = Foswiki::Func::getCgiQuery();
+    my $query         = Foswiki::Func::getCgiQuery();
     my $changingState = 1;
     my %stateChangeInfo;
-    foreach my $p (qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
-                     WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW)) {
+    foreach my $p (
+        qw(WORKFLOWPENDINGACTION WORKFLOWCURRENTSTATE
+        WORKFLOWPENDINGSTATE WORKFLOWWORKFLOW)
+      )
+    {
         $stateChangeInfo{$p} = $query->param($p);
-        if (defined $stateChangeInfo{$p}) {
+        if ( defined $stateChangeInfo{$p} ) {
             $query->delete($p);
-        } else {
+        }
+        else {
+
             # All params must be present to change state
             $changingState = 0;
             last;
@@ -615,19 +640,23 @@ sub beforeSaveHandler {
     my $controlledTopic;
 
     if ($changingState) {
+
         # See if we are expecting to apply a new state from query
         # params
-        my ($wfw, $wft) = Foswiki::Func::normalizeWebTopicName(
-            undef, $stateChangeInfo{WORKFLOWWORKFLOW} );
+        my ( $wfw, $wft ) =
+          Foswiki::Func::normalizeWebTopicName( undef,
+            $stateChangeInfo{WORKFLOWWORKFLOW} );
 
         # Can't use initTOPIC, because the data comes from the save
-        my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow(
-            $wfw, $wft );
+        my $workflow =
+          new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfw, $wft );
         $controlledTopic =
-          new Foswiki::Plugins::WorkflowPlugin::ControlledTopic(
-              $workflow, $web, $topic, $meta, $text );
+          new Foswiki::Plugins::WorkflowPlugin::ControlledTopic( $workflow,
+            $web, $topic, $meta, $text );
 
-    } else {
+    }
+    else {
+
         # Otherwise we are *not* changing state so we can use initTOPIC
         $controlledTopic = _initTOPIC( $web, $topic );
     }
@@ -635,21 +664,26 @@ sub beforeSaveHandler {
     return unless $controlledTopic;
 
     if ($changingState) {
+
         # The beforeSaveHandler has no way to abort the save,
         # so we have to do a state change without a topic save.
-        $controlledTopic->changeState($stateChangeInfo{WORKFLOWPENDINGACTION});
-    } elsif ( !$controlledTopic->canEdit() ) {
+        $controlledTopic->changeState(
+            $stateChangeInfo{WORKFLOWPENDINGACTION} );
+    }
+    elsif ( !$controlledTopic->canEdit() ) {
+
         # Not a state change, make sure the AllowEdit in the state table
         # permits this action
         throw Foswiki::OopsException(
             'accessdenied',
-            def   => 'topic_access',
-            web   => $_[2],
-            topic => $_[1],
-            params =>
-              [ 'Save topic',
-'You are not permitted to save this topic. You have been denied access by Workflow Plugin' ]
-             );
+            def    => 'topic_access',
+            web    => $_[2],
+            topic  => $_[1],
+            params => [
+                'Save topic',
+'You are not permitted to save this topic. You have been denied access by Workflow Plugin'
+            ]
+        );
     }
 }
 
