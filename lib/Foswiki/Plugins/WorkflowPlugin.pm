@@ -20,7 +20,7 @@ use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.12.1';
+our $RELEASE = '1.12.2';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -448,12 +448,47 @@ sub _changeState {
     return undef;
 }
 
+sub _expandParametedTags {
+    my ( $topic, $web, $tag, $state, $param ) = @_;
+
+    my $attr = new Foswiki::Attrs($param);
+    my ( $theTopic, $theWeb );
+
+    if ( defined $attr->{_DEFAULT} ) {
+        $theTopic = $attr->{_DEFAULT};
+        $theWeb = defined $attr->{web} ? $attr->{web} : $web;
+    }
+    else {
+        $theTopic = $topic;
+        $theWeb   = $web;
+    }
+    
+    my $controlledTopic = _initTOPIC( $theWeb, $theTopic );
+    if ($controlledTopic) {
+        if ( $tag eq 'REV' || $tag eq 'TIME' ) {
+            $tag = 'VERSION' if $tag eq 'REV';
+            return $controlledTopic->getState("LAST${tag}_$state") || '';
+        }
+        else {
+            my $val = $controlledTopic->getState("LAST${tag}_$state");
+            my $url = Foswiki::Func::getScriptUrl( $theWeb, $theTopic, 'view' );
+            return $val
+              ? CGI::a( { href => "$url?rev=$val" }, "revision $val" )
+              : '';
+        }
+    }
+
+    return '';
+}
+
 # Mop up other WORKFLOW tags without individual handlers
 sub commonTagsHandler {
     my ( $text, $topic, $web ) = @_;
 
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    # Expand %WORKFLOWLAST*{"topic" web="web" ...}%
+    $_[0] =~ s/%WORKFLOWLAST(REV|TIME|VERSION)_(\w+){(.*?)}%/_expandParametedTags($topic, $web, $1, $2, $3)/ge;
 
+    my $controlledTopic = _initTOPIC( $web, $topic );
     if ($controlledTopic) {
 
         # show all tags defined by the preferences

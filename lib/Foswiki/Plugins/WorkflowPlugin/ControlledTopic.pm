@@ -52,9 +52,16 @@ sub debugging {
 }
 
 # Get the current state of the workflow in this topic
+# If called without parameters returns state name, otherwise
+# returns the value associated with the parameter.
 sub getState {
     my $this = shift;
-    return $this->{state}->{name} || $this->{workflow}->getDefaultState();
+    my $key  = shift;
+
+    return
+      defined $key
+      ? $this->{state}->{$key}
+      : ( $this->{state}->{name} || $this->{workflow}->getDefaultState() );
 }
 
 # Get the available actions from the current state

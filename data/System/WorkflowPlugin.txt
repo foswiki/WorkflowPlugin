@@ -182,6 +182,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Version: | %$VERSION% |
 |  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  1.12.2 (08 Dec 2011) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item10309: make WORKFLOWLAST* accept topic parameter |
 |  1.12.1 (01 Mar 2011) | Foswikitask:Item10356: Correct parsing of trailing spaces in state and transition tables |
 |  1.12 (23 Feb 2011) | Foswiki:Tasks.Item10008: Implement support for custom email templates on state transition notifications. |
 |  1.11.1 (25 Aug 2010) | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as an iterator control variable in your perl code. |
