@@ -722,6 +722,28 @@ sub beforeSaveHandler {
     }
 }
 
+sub afterSaveHandler {
+    my ( $text, $topic, $web, $error, $meta ) = @_;
+
+    return if defined $error;
+    
+    #SMELL: the following line should not exist, but I need it
+    # until I commit the Foswikitask:Item11338 work.
+    $cache{"$web.$topic"} = undef();
+    my $controlledTopic = _initTOPIC( $web, $topic );
+    return unless $controlledTopic;
+    return
+      if $controlledTopic->getState(
+        'LASTVERSION_' . $controlledTopic->getState() ) ==
+      $meta->getLatestRev();
+
+    $controlledTopic->setState( $controlledTopic->getState(),
+        $meta->getLatestRev() );
+    try {
+        $controlledTopic->{meta}->saveAs($web, $topic, dontlog => 1, minor => 1);
+    };
+}
+
 1;
 __END__
 
