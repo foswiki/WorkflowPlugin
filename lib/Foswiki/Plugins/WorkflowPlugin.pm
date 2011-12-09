@@ -220,7 +220,7 @@ sub _WORKFLOWTRANSITION {
 
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
-      || 'foswikiChangeFormButton foswikiSubmit"';
+      || 'foswikiChangeFormButton foswikiSubmit';
 
     if ( $numberOfActions == 1 ) {
         push( @fields,

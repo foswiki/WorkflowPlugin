@@ -37,7 +37,7 @@ The standard [[format tokens]] are supported, as well as the following special t
 
 The appearance of the button to change state can be configured by providing a CSS class. For example,
    * Set WORKFLOWTRANSITIONCSSCLASS = myCSSClass
-The default is =twikiChangeFormButton twikiSubmit=.
+The default is =foswikiChangeFormButton foswikiSubmit=.
 
 The =WORKFLOWFORK= macro is used to generate a button that will create a copy of
 a workflow topic. It accepts the following parameters:
