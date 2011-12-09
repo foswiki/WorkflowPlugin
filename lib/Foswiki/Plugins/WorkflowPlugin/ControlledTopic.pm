@@ -67,13 +67,13 @@ sub getState {
 # Get the available actions from the current state
 sub getActions {
     my $this = shift;
-    return $this->isModifyable() ? $this->{workflow}->getActions($this) : ();
+    return $this->isLatestRev() ? $this->{workflow}->getActions($this) : ();
 }
 
 # Set the current state in the topic
 sub setState {
     my ( $this, $state, $version ) = @_;
-    return unless $this->isModifyable();
+    return unless $this->isLatestRev();
     $this->{state}->{name} = $state;
     $this->{state}->{"LASTVERSION_$state"} = $version;
     $this->{state}->{"LASTTIME_$state"} =
@@ -101,6 +101,11 @@ sub haveNextState {
     return $this->{workflow}->getNextState( $this, $action );
 }
 
+sub isLatestRev {
+    my $this = shift;
+    return $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev();
+}
+
 # Some day we may handle the can... functions indepedently. For now,
 # they all check editability thus....
 sub isModifyable {
@@ -111,9 +116,7 @@ sub isModifyable {
     # See if the workflow allows an edit
     unless ( defined $this->{isEditable} ) {
         $this->{isEditable} = (
-
-            # Is this the most recent version?
-            $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev()
+            $this->isLatestRev()
 
               # Does the workflow permit editing?
               && $this->{workflow}->allowEdit($this)
@@ -197,7 +200,7 @@ sub newForm {
 sub changeState {
     my ( $this, $action ) = @_;
 
-    return unless $this->isModifyable();
+    return unless $this->isLatestRev();
 
     my $state = $this->{workflow}->getNextState( $this, $action );
     my $form = $this->{workflow}->getNextForm( $this, $action );
@@ -354,7 +357,7 @@ sub changeState {
 sub save {
     my $this = shift;
 
-    return unless $this->isModifyable();
+    return unless $this->isLatestRev();
 
     Foswiki::Func::saveTopic( $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { forcenewrevision => 1 } );
