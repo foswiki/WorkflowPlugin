@@ -334,7 +334,7 @@ sub _WORKFLOWFORK {
     my $label = $attributes->{label} || 'Fork';
     my $buttonClass =
       Foswiki::Func::getPreferencesValue('WORKFLOWTRANSITIONCSSCLASS')
-      || 'foswikiChangeFormButton foswikiSubmit"';
+      || 'foswikiChangeFormButton foswikiSubmit';
     my $url = Foswiki::Func::getScriptUrl( 'WorkflowPlugin', 'fork', 'rest' );
     return <<HTML;
 <form name='forkWorkflow' action='$url' method="POST">
