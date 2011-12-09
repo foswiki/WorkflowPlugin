@@ -67,12 +67,13 @@ sub getState {
 # Get the available actions from the current state
 sub getActions {
     my $this = shift;
-    return $this->{workflow}->getActions($this);
+    return $this->isModifyable() ? $this->{workflow}->getActions($this) : ();
 }
 
 # Set the current state in the topic
 sub setState {
     my ( $this, $state, $version ) = @_;
+    return unless $this->isModifyable();
     $this->{state}->{name} = $state;
     $this->{state}->{"LASTVERSION_$state"} = $version;
     $this->{state}->{"LASTTIME_$state"} =
@@ -111,8 +112,11 @@ sub isModifyable {
     unless ( defined $this->{isEditable} ) {
         $this->{isEditable} = (
 
-            # Does the workflow permit editing?
-            $this->{workflow}->allowEdit($this)
+            # Is this the most recent version?
+            $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev()
+
+              # Does the workflow permit editing?
+              && $this->{workflow}->allowEdit($this)
 
               # Does Foswiki permit editing?
               && Foswiki::Func::checkAccessPermission(
@@ -192,6 +196,8 @@ sub newForm {
 # does notify the change to listeners.
 sub changeState {
     my ( $this, $action ) = @_;
+
+    return unless $this->isModifyable();
 
     my $state = $this->{workflow}->getNextState( $this, $action );
     my $form = $this->{workflow}->getNextForm( $this, $action );
@@ -347,6 +353,8 @@ sub changeState {
 # Save the topic to the store
 sub save {
     my $this = shift;
+
+    return unless $this->isModifyable();
 
     Foswiki::Func::saveTopic( $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { forcenewrevision => 1 } );

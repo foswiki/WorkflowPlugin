@@ -61,11 +61,11 @@ sub initPlugin {
 
 # Tag handler
 sub _initTOPIC {
-    my ( $web, $topic ) = @_;
+    my ( $web, $topic, $rev ) = @_;
 
     ( $web, $topic ) = Foswiki::Func::normalizeWebTopicName( $web, $topic );
 
-    my $controlledTopic = $cache{"$web.$topic"};
+    my $controlledTopic = defined $rev ? $cache{"$web.$topic.$rev"} : undef;
     return $controlledTopic if $controlledTopic;
 
     if ( defined &Foswiki::Func::isValidTopicName ) {
@@ -80,7 +80,15 @@ sub _initTOPIC {
         return undef unless Foswiki::Func::isValidWikiWord($topic);
     }
 
-    my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
+    my $info = new Foswiki::Meta( $Foswiki::Plugins::SESSION, $web, $topic );
+    ($rev) = $rev =~ /(\d+)/ if defined $rev;
+    $rev = $info->getLatestRev()
+      if !defined $rev || $rev > $info->getLatestRev() || $rev <= 0;
+
+    $controlledTopic = $cache{"$web.$topic.$rev"};
+    return $controlledTopic if $controlledTopic;
+
+    my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic, $rev );
 
     Foswiki::Func::pushTopicContext( $web, $topic );
     my $workflowName = Foswiki::Func::getPreferencesValue('WORKFLOW');
@@ -102,8 +110,7 @@ sub _initTOPIC {
         }
     }
 
-    $cache{"$web.$topic"} = $controlledTopic;
-
+    $cache{"$web.$topic.$rev"} = $controlledTopic;
     return $controlledTopic;
 }
 
@@ -119,7 +126,9 @@ sub _WORKFLOWEDITTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     # replace edit tag
@@ -143,7 +152,9 @@ sub _WORKFLOWSTATEMESSAGE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     return $controlledTopic->getStateMessage();
@@ -154,7 +165,9 @@ sub _WORKFLOWATTACHTOPIC {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     # replace attach tag
@@ -178,7 +191,9 @@ sub _WORKFLOWHISTORY {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     return $controlledTopic->getHistoryText();
@@ -189,7 +204,9 @@ sub _WORKFLOWTRANSITION {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     #
@@ -200,8 +217,7 @@ sub _WORKFLOWTRANSITION {
     my $cs              = $controlledTopic->getState();
 
     unless ($numberOfActions) {
-        return
-            '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state ' 
+        return '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state ' 
           . $cs
           . '</span>'
           if $controlledTopic->debugging();
@@ -267,7 +283,9 @@ sub _WORKFLOWSTATE {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     return $controlledTopic->getState();
@@ -277,7 +295,9 @@ sub _WORKFLOWSTATE {
 sub _WORKFLOWFORK {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my ($rev) =
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
     # Check we can fork
@@ -462,8 +482,9 @@ sub _expandParametedTags {
         $theTopic = $topic;
         $theWeb   = $web;
     }
-    
-    my $controlledTopic = _initTOPIC( $theWeb, $theTopic );
+
+    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $theWeb, $theTopic, $rev );
     if ($controlledTopic) {
         if ( $tag eq 'REV' || $tag eq 'TIME' ) {
             $tag = 'VERSION' if $tag eq 'REV';
@@ -486,7 +507,8 @@ sub commonTagsHandler {
     my ( $text, $topic, $web ) = @_;
 
     # Expand %WORKFLOWLAST*{"topic" web="web" ...}%
-    $_[0] =~ s/%WORKFLOWLAST(REV|TIME|VERSION)_(\w+){(.*?)}%/_expandParametedTags($topic, $web, $1, $2, $3)/ge;
+    $_[0] =~
+s/%WORKFLOWLAST(REV|TIME|VERSION)_(\w+){(.*?)}%/_expandParametedTags($topic, $web, $1, $2, $3)/ge;
 
     my $controlledTopic = _initTOPIC( $web, $topic );
     if ($controlledTopic) {
@@ -726,21 +748,22 @@ sub afterSaveHandler {
     my ( $text, $topic, $web, $error, $meta ) = @_;
 
     return if defined $error;
-    
-    #SMELL: the following line should not exist, but I need it
-    # until I commit the Foswikitask:Item11338 work.
-    $cache{"$web.$topic"} = undef();
+
     my $controlledTopic = _initTOPIC( $web, $topic );
     return unless $controlledTopic;
+
+    my $lastRev = $controlledTopic->getState(
+        'LASTVERSION_' . $controlledTopic->getState() );
+
     return
-      if $controlledTopic->getState(
-        'LASTVERSION_' . $controlledTopic->getState() ) ==
-      $meta->getLatestRev();
+      if defined $lastRev && $lastRev == $meta->getLatestRev();
 
     $controlledTopic->setState( $controlledTopic->getState(),
         $meta->getLatestRev() );
+
     try {
-        $controlledTopic->{meta}->saveAs($web, $topic, dontlog => 1, minor => 1);
+        $controlledTopic->{meta}
+          ->saveAs( $web, $topic, dontlog => 1, minor => 1 );
     };
 }
 
