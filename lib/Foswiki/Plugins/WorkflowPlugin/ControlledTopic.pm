@@ -23,7 +23,7 @@ package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
-use Foswiki ();         # for regexes
+use Foswiki       ();    # for regexes
 use Foswiki::Func ();
 
 # Constructor
@@ -37,10 +37,38 @@ sub new {
             meta     => $meta,
             text     => $text,
             state    => $meta->get('WORKFLOW'),
-            history  => $meta->get('WORKFLOWHISTORY'),
+            history  => {
+                data => [
+                    sort { $a->{name} <=> $b->{name} }
+                      grep { defined $_->{name} && $_->{name} ne 'legacy' }
+                      $meta->find('WORKFLOWHISTORY')
+                ]
+            },
         },
         $class
     );
+
+    # Compatibility with versions before 1.12.2
+    # Look at Foswikitask:Item8002 for details.
+    foreach my $v ( $meta->find('WORKFLOWHISTORY') ) {
+        next if defined $v->{name} && $v->{name} ne 'legacy';
+
+        if ( !defined $v->{name} ) {
+            $this->{meta}->remove('WORKFLOWHISTORY');
+
+            $this->{meta}->putAll(
+                'WORKFLOWHISTORY',
+                @{ $this->{history}->{data} },
+                (
+                    $v->{value}
+                    ? { name => 'legacy', value => $v->{value} }
+                    : ()
+                ),
+            );
+        }
+
+        $this->{history}->{legacy} = $v->{value} if $v->{value};
+    }
 
     return $this;
 }
@@ -58,8 +86,7 @@ sub getState {
     my $this = shift;
     my $key  = shift;
 
-    return
-      defined $key
+    return defined $key
       ? $this->{state}->{$key}
       : ( $this->{state}->{name} || $this->{workflow}->getDefaultState() );
 }
@@ -91,8 +118,53 @@ sub getStateMessage {
 sub getHistoryText {
     my $this = shift;
 
-    return '' unless $this->{history};
-    return $this->{history}->{value} || '';
+    return ''
+      unless @{ $this->{history}->{data} } || $this->{history}->{legacy};
+
+    my $histStr =
+      defined $this->{history}->{legacy}
+      ? $this->{history}->{legacy}
+      : '';
+
+    my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
+      || '<br>$state -- $date';
+    foreach my $hist ( @{ $this->{history}->{data} } ) {
+        if ( $hist->{forkto} ) {
+            $histStr .=
+                "<br>Forked to "
+              . join( ', ', map { "[[$_]]" } split /\s*,\s*/, $hist->{forkto} )
+              . " by $hist->{author} at "
+              . Foswiki::Func::formatTime( $hist->{date}, undef, 'servertime' );
+        }
+        elsif ( $hist->{forkfrom} ) {
+            $histStr .=
+              "<br>Forked from [[$hist->{forkfrom}]] by $hist->{author} at "
+              . Foswiki::Func::formatTime( $hist->{date}, undef, 'servertime' );
+        }
+        else {
+            my $tmpl = $fmt;
+            $tmpl =~ s/\$wikiusername/$hist->{author}/go;
+            $tmpl =~ s/\$state/$hist->{state}/go;
+            $tmpl =~
+s/\$date/Foswiki::Func::formatTime($hist->{date}, undef, 'servertime')/geo;
+            $tmpl =~ s/\$rev/$hist->{name}/go;
+            if ( defined &Foswiki::Func::decodeFormatTokens ) {
+
+                # Compatibility note: also expands $percnt etc.
+                $tmpl = Foswiki::Func::decodeFormatTokens($tmpl);
+            }
+            else {
+                my $mixedAlpha = $Foswiki::regex{mixedAlpha};
+                $tmpl =~ s/\$quot/\"/go;
+                $tmpl =~ s/\$n/\n/go;
+                $tmpl =~ s/\$n\(\)/\n/go;
+                $tmpl =~ s/\$n([^$mixedAlpha]|$)/\n$1/gos;
+            }
+            $histStr .= $tmpl;
+        }
+    }
+
+    return $histStr;
 }
 
 # Return true if a new state is available using this action
@@ -202,8 +274,8 @@ sub changeState {
 
     return unless $this->isLatestRev();
 
-    my $state = $this->{workflow}->getNextState( $this, $action );
-    my $form = $this->{workflow}->getNextForm( $this, $action );
+    my $state  = $this->{workflow}->getNextState( $this,  $action );
+    my $form   = $this->{workflow}->getNextForm( $this,   $action );
     my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
     my ( $revdate, $revuser, $version ) = $this->{meta}->getRevisionInfo();
@@ -215,27 +287,22 @@ sub changeState {
 
     $this->setState( $state, $version );
 
-    my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
-      || '<br>$state -- $date';
-    $fmt =~ s/\$wikiusername/Foswiki::Func::getWikiUserName()/geo;
-    $fmt =~ s/\$state/$this->getState()/goe;
-    $fmt =~ s/\$date/$this->{state}->{"LASTTIME_$state"}/geo;
-    $fmt =~ s/\$rev/$this->{state}->{"LASTVERSION_$state"}/geo;
-    if ( defined &Foswiki::Func::decodeFormatTokens ) {
-
-        # Compatibility note: also expands $percnt etc.
-        $fmt = Foswiki::Func::decodeFormatTokens($fmt);
-    }
-    else {
-        my $mixedAlpha = $Foswiki::regex{mixedAlpha};
-        $fmt =~ s/\$quot/\"/go;
-        $fmt =~ s/\$n/\n/go;
-        $fmt =~ s/\$n\(\)/\n/go;
-        $fmt =~ s/\$n([^$mixedAlpha]|$)/\n$1/gos;
-    }
-
-    $this->{history}->{value} .= $fmt;
-    $this->{meta}->put( "WORKFLOWHISTORY", $this->{history} );
+    push @{ $this->{history}->{data} },
+      {
+        name   => -1,
+        state  => $this->getState(),
+        author => Foswiki::Func::getWikiUserName(),
+        date   => $revdate,
+      };
+    $this->{meta}->putAll(
+        "WORKFLOWHISTORY",
+        @{ $this->{history}->{data} },
+        (
+            defined $this->{history}->{legacy}
+            ? { name => 'legacy', value => $this->{history}->{legacy} }
+            : ()
+        )
+    );
     if ($form) {
         $this->{meta}->put( "FORM", { name => $form } );
     }    # else leave the existing form in place

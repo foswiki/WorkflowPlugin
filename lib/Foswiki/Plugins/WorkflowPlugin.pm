@@ -195,7 +195,7 @@ sub _WORKFLOWHISTORY {
       defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
-
+    
     return $controlledTopic->getHistoryText();
 }
 
@@ -545,7 +545,7 @@ sub _restFork {
 
     my ( $ttmeta, $tttext ) = Foswiki::Func::readTopic( $forkWeb, $forkTopic );
 
-    my $now = Foswiki::Func::formatTime( time(), undef, 'servertime' );
+    my $now = time();
     my $who = Foswiki::Func::getWikiUserName();
 
     # create the new topics
@@ -572,20 +572,26 @@ sub _restFork {
             }
             $meta->putAll( $k, @data );
         }
-        my $history =
-          { value => "<br>Forked from [[$forkWeb.$forkTopic]] by $who at $now",
-          };
+        my $history = {
+            name     => -1,
+            author   => $who,
+            date     => $now,
+            forkfrom => "$forkWeb.$forkTopic",
+        };
         $meta->put( "WORKFLOWHISTORY", $history );
         Foswiki::Func::saveTopic( $w, $t, $meta, $text,
             { forcenewrevision => 1 } );
     }
 
-    my $history = $ttmeta->get('WORKFLOWHISTORY') || {};
-    $history->{value} .=
-        "<br>Forked to "
-      . join( ', ', map { "[[$forkWeb.$_]]" } @newnames )
-      . " by $who at $now";
-    $ttmeta->put( "WORKFLOWHISTORY", $history );
+    my @hist = $ttmeta->find('WORKFLOWHISTORY');
+
+    push @hist,  {
+        name   => -1,
+        author => $who,
+        date   => $now,
+        forkto => join( ', ', map { "$forkWeb.$_" } @newnames ),
+    };
+    $ttmeta->putAll( "WORKFLOWHISTORY", @hist );
 
     if ($lockdown) {
         $ttmeta->putKeyed( "PREFERENCE",
@@ -752,11 +758,25 @@ sub afterSaveHandler {
     my $controlledTopic = _initTOPIC( $web, $topic );
     return unless $controlledTopic;
 
+    my $mustSave = 0;
+
+    my @hist = $controlledTopic->{meta}->find('WORKFLOWHISTORY');
+    for (my $h = 0; $h < @hist; $h++) {
+        next unless $hist[$h]->{name} eq '-1';
+        $hist[$h]->{name} = $meta->getLatestRev();
+        last;
+    }
+    if ( @hist ) {
+        $controlledTopic->{meta}->remove( 'WORKFLOWHISTORY' );
+        $controlledTopic->{meta}->putAll( 'WORKFLOWHISTORY', @hist );
+        $mustSave = 1;
+    }
+
     my $lastRev = $controlledTopic->getState(
         'LASTVERSION_' . $controlledTopic->getState() );
 
     return
-      if defined $lastRev && $lastRev == $meta->getLatestRev();
+      if !$mustSave && defined $lastRev && $lastRev == $meta->getLatestRev();
 
     $controlledTopic->setState( $controlledTopic->getState(),
         $meta->getLatestRev() );
