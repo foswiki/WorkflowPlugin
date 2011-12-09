@@ -68,6 +68,7 @@ sub new {
         }
 
         $this->{history}->{legacy} = $v->{value} if $v->{value};
+        last;
     }
 
     return $this;
