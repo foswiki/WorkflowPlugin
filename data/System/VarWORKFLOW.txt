@@ -13,7 +13,7 @@
 | =%<nop>WORKFLOWSTATE%= | Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned. |
 | =%<nop>WORKFLOWSTATEMESSAGE%= | Expands to the corresponding message in the state table. |
 
-(All the macros accept an optional default parameter, which is the name of a topic, and a =web= parameter. If these are omitted, they will default to the current topic.)
+(All the macros accept an optional default parameter, which is the name of a topic, a =web= and a =rev= parameter. If these are omitted, they will default to the current topic, latest revision)
 
 Furthermore, the plugin replaces any macro starting with =WORKFLOW= that is defined in the workflow description file.
 
