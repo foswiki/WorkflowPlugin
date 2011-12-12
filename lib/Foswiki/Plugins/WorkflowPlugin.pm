@@ -195,7 +195,7 @@ sub _WORKFLOWHISTORY {
       defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
-    
+
     return $controlledTopic->getHistoryText();
 }
 
@@ -547,6 +547,7 @@ sub _restFork {
 
     my $now = time();
     my $who = Foswiki::Func::getWikiUserName();
+    my $rev = $ttmeta->getLoadedRev();
 
     # create the new topics
     foreach my $newname (@newnames) {
@@ -577,6 +578,9 @@ sub _restFork {
             author   => $who,
             date     => $now,
             forkfrom => "$forkWeb.$forkTopic",
+            rev      => $rev + 1,              # Since there will be a save with
+                                               # 'forcenewrevision' it's safe
+                                               # to do +1 here.
         };
         $meta->put( "WORKFLOWHISTORY", $history );
         Foswiki::Func::saveTopic( $w, $t, $meta, $text,
@@ -585,12 +589,13 @@ sub _restFork {
 
     my @hist = $ttmeta->find('WORKFLOWHISTORY');
 
-    push @hist,  {
+    push @hist,
+      {
         name   => -1,
         author => $who,
         date   => $now,
         forkto => join( ', ', map { "$forkWeb.$_" } @newnames ),
-    };
+      };
     $ttmeta->putAll( "WORKFLOWHISTORY", @hist );
 
     if ($lockdown) {
@@ -761,13 +766,13 @@ sub afterSaveHandler {
     my $mustSave = 0;
 
     my @hist = $controlledTopic->{meta}->find('WORKFLOWHISTORY');
-    for (my $h = 0; $h < @hist; $h++) {
+    for ( my $h = 0 ; $h < @hist ; $h++ ) {
         next unless $hist[$h]->{name} eq '-1';
         $hist[$h]->{name} = $meta->getLatestRev();
         last;
     }
-    if ( @hist ) {
-        $controlledTopic->{meta}->remove( 'WORKFLOWHISTORY' );
+    if (@hist) {
+        $controlledTopic->{meta}->remove('WORKFLOWHISTORY');
         $controlledTopic->{meta}->putAll( 'WORKFLOWHISTORY', @hist );
         $mustSave = 1;
     }

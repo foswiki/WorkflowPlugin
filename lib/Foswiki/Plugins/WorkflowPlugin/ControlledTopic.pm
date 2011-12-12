@@ -176,7 +176,8 @@ sub haveNextState {
 
 sub isLatestRev {
     my $this = shift;
-    return $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev();
+    return !defined $this->{meta}->getLoadedRev()
+      || $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev();
 }
 
 # Some day we may handle the can... functions indepedently. For now,
