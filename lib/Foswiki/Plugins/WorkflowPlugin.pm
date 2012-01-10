@@ -20,7 +20,7 @@ use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.12.2';
+our $RELEASE = '1.12.3';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -66,7 +66,10 @@ sub _initTOPIC {
     ( $web, $topic ) = Foswiki::Func::normalizeWebTopicName( $web, $topic );
 
     my $controlledTopic = defined $rev ? $cache{"$web.$topic.$rev"} : undef;
-    return $controlledTopic if $controlledTopic;
+    if ($controlledTopic) {
+      return if $controlledTopic eq '_undef';
+      return $controlledTopic;
+    }
 
     if ( defined &Foswiki::Func::isValidTopicName ) {
 
@@ -110,7 +113,7 @@ sub _initTOPIC {
         }
     }
 
-    $cache{"$web.$topic.$rev"} = $controlledTopic;
+    $cache{"$web.$topic.$rev"} = $controlledTopic || '_undef';
     return $controlledTopic;
 }
 
