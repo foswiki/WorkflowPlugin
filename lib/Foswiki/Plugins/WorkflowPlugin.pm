@@ -20,7 +20,7 @@ use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.12.3';
+our $RELEASE = '1.12.4';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -61,14 +61,20 @@ sub initPlugin {
 
 # Tag handler
 sub _initTOPIC {
-    my ( $web, $topic, $rev ) = @_;
+    my ( $web, $topic, $rev, $meta, $text, $forceNew ) = @_;
+
+    $rev ||= 99999; # latest
 
     ( $web, $topic ) = Foswiki::Func::normalizeWebTopicName( $web, $topic );
 
-    my $controlledTopic = defined $rev ? $cache{"$web.$topic.$rev"} : undef;
-    if ($controlledTopic) {
-      return if $controlledTopic eq '_undef';
-      return $controlledTopic;
+    my $controlledTopic;
+
+    unless ($forceNew) {
+      $controlledTopic = $cache{"$web.$topic.$rev"};
+      if ($controlledTopic) {
+        return if $controlledTopic eq '_undef';
+        return $controlledTopic;
+      }
     }
 
     if ( defined &Foswiki::Func::isValidTopicName ) {
@@ -83,15 +89,7 @@ sub _initTOPIC {
         return undef unless Foswiki::Func::isValidWikiWord($topic);
     }
 
-    my $info = new Foswiki::Meta( $Foswiki::Plugins::SESSION, $web, $topic );
-    ($rev) = $rev =~ /(\d+)/ if defined $rev;
-    $rev = $info->getLatestRev()
-      if !defined $rev || $rev > $info->getLatestRev() || $rev <= 0;
-
-    $controlledTopic = $cache{"$web.$topic.$rev"};
-    return $controlledTopic if $controlledTopic;
-
-    my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic, $rev );
+    ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic, $rev ) unless defined $meta;
 
     Foswiki::Func::pushTopicContext( $web, $topic );
     my $workflowName = Foswiki::Func::getPreferencesValue('WORKFLOW');
@@ -101,15 +99,15 @@ sub _initTOPIC {
         ( my $wfWeb, $workflowName ) =
           Foswiki::Func::normalizeWebTopicName( $web, $workflowName );
 
-        return undef unless Foswiki::Func::topicExists( $wfWeb, $workflowName );
+        if(Foswiki::Func::topicExists( $wfWeb, $workflowName )) {
+          my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
+              $workflowName );
 
-        my $workflow = new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
-            $workflowName );
-
-        if ($workflow) {
-            $controlledTopic =
-              new Foswiki::Plugins::WorkflowPlugin::ControlledTopic( $workflow,
-                $web, $topic, $meta, $text );
+          if ($workflow) {
+              $controlledTopic =
+                new Foswiki::Plugins::WorkflowPlugin::ControlledTopic( $workflow,
+                  $web, $topic, $meta, $text );
+          }
         }
     }
 
@@ -635,7 +633,7 @@ sub beforeEditHandler {
 
     return if $changingState;    # permissions check not required
 
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my $controlledTopic = _initTOPIC( $web, $topic, undef, $meta, $text );
 
     return unless $controlledTopic;    # not controlled, so check not required
 
@@ -729,7 +727,7 @@ sub beforeSaveHandler {
     else {
 
         # Otherwise we are *not* changing state so we can use initTOPIC
-        $controlledTopic = _initTOPIC( $web, $topic );
+        $controlledTopic = _initTOPIC( $web, $topic, undef, $meta, $text );
     }
 
     return unless $controlledTopic;
@@ -763,7 +761,7 @@ sub afterSaveHandler {
 
     return if defined $error;
 
-    my $controlledTopic = _initTOPIC( $web, $topic );
+    my $controlledTopic = _initTOPIC( $web, $topic, undef, $meta, $text, 1 );
     return unless $controlledTopic;
 
     my $mustSave = 0;
