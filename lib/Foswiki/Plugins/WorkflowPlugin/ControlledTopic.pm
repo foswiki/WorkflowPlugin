@@ -23,7 +23,7 @@ package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
 
-use Foswiki       ();    # for regexes
+use Foswiki ();         # for regexes
 use Foswiki::Func ();
 
 # Constructor
@@ -276,8 +276,8 @@ sub changeState {
 
     return unless $this->isLatestRev();
 
-    my $state  = $this->{workflow}->getNextState( $this,  $action );
-    my $form   = $this->{workflow}->getNextForm( $this,   $action );
+    my $state = $this->{workflow}->getNextState( $this, $action );
+    my $form = $this->{workflow}->getNextForm( $this, $action );
     my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
     my ( $revdate, $revuser, $version ) = $this->{meta}->getRevisionInfo();
