@@ -196,10 +196,11 @@ sub isModifyable {
               && $this->{workflow}->allowEdit($this)
 
               # Does Foswiki permit editing?
+	      # DO NOT PASS $this->{meta}, because of Item11461
               && Foswiki::Func::checkAccessPermission(
                 'CHANGE',      $Foswiki::Plugins::SESSION->{user},
                 $this->{text}, $this->{topic},
-                $this->{web},  $this->{meta}
+                $this->{web}
               )
         ) ? 1 : 0;
     }
