@@ -661,7 +661,7 @@ sub beforeAttachmentSaveHandler {
     my $controlledTopic = _initTOPIC( $web, $topic );
     return unless $controlledTopic;
 
-    unless ( $controlledTopic->canEdit() ) {
+    unless ( $controlledTopic->canSave() ) {
         throw Foswiki::OopsException(
             'accessdenied',
             status => 403,
@@ -742,7 +742,7 @@ sub beforeSaveHandler {
         $controlledTopic->changeState(
             $stateChangeInfo{WORKFLOWPENDINGACTION} );
     }
-    elsif ( !$controlledTopic->canEdit() ) {
+    elsif ( !$controlledTopic->canSave() ) {
 
         # Not a state change, make sure the AllowEdit in the state table
         # permits this action
