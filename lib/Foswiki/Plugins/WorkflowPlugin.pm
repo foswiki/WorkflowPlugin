@@ -20,7 +20,7 @@ use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
 our $VERSION = '$Rev$';
-our $RELEASE = '1.12.5';
+our $RELEASE = '1.12.6';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -43,6 +43,9 @@ sub initPlugin {
         authenticate => 1,
         http_allow   => 'POST'
     );
+
+    Foswiki::Meta::registerMETA( 'WORKFLOW' );
+    Foswiki::Meta::registerMETA( 'WORKFLOWHISTORY', many => 1 );
 
     Foswiki::Func::registerTagHandler( 'WORKFLOWSTATE', \&_WORKFLOWSTATE );
     Foswiki::Func::registerTagHandler( 'WORKFLOWEDITTOPIC',
