@@ -44,7 +44,7 @@ sub initPlugin {
         http_allow   => 'POST'
     );
 
-    Foswiki::Meta::registerMETA( 'WORKFLOW' );
+    Foswiki::Meta::registerMETA('WORKFLOW');
     Foswiki::Meta::registerMETA( 'WORKFLOWHISTORY', many => 1 );
 
     Foswiki::Func::registerTagHandler( 'WORKFLOWSTATE', \&_WORKFLOWSTATE );
