@@ -2,7 +2,7 @@
 ---+++ WORKFLOW* -- macros associated with WorkflowPlugin
 | *Controlling topics in the workflow* ||
 | =%<nop>WORKATTACHTOPIC%= | Expands to a link that lets you attach to the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
-| =%<nop>WORKEDITTOPIC%= | Expands to a link that lets you edit the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
+| =%<nop>WORKFLOWEDITTOPIC%= | Expands to a link that lets you edit the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
 | =%<nop>WORKFLOWFORK{...}%= | Expands to a button that will create a copy of the _current_ topic (see below for more details) |
 | =%<nop>WORKFLOWTRANSITION%= | Expands to either (a) a pull-down menu if the user can perform more than one transition, (b) a button if the current user can only perform one transition, or (c) empty space if the current user is not allowed to perform any action. You can change the format of the button using a CSS class (see WORKFLOWTRANSITIONCSSCLASS below) |
 | *Querying the workflow* ||
