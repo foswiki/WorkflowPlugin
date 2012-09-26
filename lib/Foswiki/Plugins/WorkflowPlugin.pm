@@ -224,7 +224,7 @@ sub _WORKFLOWTRANSITION {
 
     unless ($numberOfActions) {
         return
-            '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state ' 
+            '<span class="foswikiAlert">NO AVAILABLE ACTIONS in state '
           . $cs
           . '</span>'
           if $controlledTopic->debugging();
@@ -384,9 +384,9 @@ sub _changeState {
     my $state  = $query->param('WORKFLOWSTATE');
     die "BAD STATE $action $state!=", $controlledTopic->getState()
       unless $action
-          && $state
-          && $state eq $controlledTopic->getState()
-          && $controlledTopic->haveNextState($action);
+      && $state
+      && $state eq $controlledTopic->getState()
+      && $controlledTopic->haveNextState($action);
 
     my $newForm = $controlledTopic->newForm($action);
 
