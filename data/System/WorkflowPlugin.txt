@@ -1,3 +1,5 @@
+%META:TOPICINFO{author="ProjectContributor" date="1401261139" format="1.1" version="1"}%
+%META:TOPICPARENT{name="ReferenceManual"}%
 ---+ %TOPIC%
 <!--
    * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
@@ -102,6 +104,7 @@ From: %WIKIWEBMASTERNAME% <%WIKIWEBMASTER%>
 To: %EMAILTO%
 Cc:
 Subject: %WIKITOOLNAME%.%WEB%.%TOPIC% - transitioned to %TARGET_STATE%
+Auto-Submitted: auto-generated
 MIME-Version: 1.0
 Content-Type: text/plain
 %WIKINAME% has moved the topic %WEB%.%TOPIC% to the %TARGET_STATE% state.  You can view the document here:
@@ -219,6 +222,6 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 <!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
 
-%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1159057355" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1159056685" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1159056685" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1401261139" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1401261139" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1401261139" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
