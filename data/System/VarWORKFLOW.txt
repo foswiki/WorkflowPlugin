@@ -1,3 +1,4 @@
+%META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
 #VarWEB
 ---+++ WORKFLOW* -- macros associated with WorkflowPlugin
 | *Controlling topics in the workflow* ||
@@ -7,9 +8,9 @@
 | =%<nop>WORKFLOWTRANSITION%= | Expands to either (a) a pull-down menu if the user can perform more than one transition, (b) a button if the current user can only perform one transition, or (c) empty space if the current user is not allowed to perform any action. You can change the format of the button using a CSS class (see WORKFLOWTRANSITIONCSSCLASS below) |
 | *Querying the workflow* ||
 | =%<nop>WORKFLOWHISTORY%= | Expands to the history of state transitions the topic has undergone. The format of the history is dictated by the =WORKFLOWHISTORYFORMAT= (described below). |
-| =%<nop>WORKFLOWLASTREV_State%= | Expands to the version number when the document was last in the state _State_. |
-| =%<nop>WORKFLOWLASTTIME_State%= | Expands to the timestamp when the document was last in the _State_ last state. For example, =%<nop>WORKFLOWLASTTIME_APPROVED%= would be replaced by the timestamp when the document was last in the =APPROVED= state. |
-| =%<nop>WORKFLOWLASTVERSION_State%= | Expands to a link to the version of the document when it was last in the state _State_. |
+| =%<nop>WORKFLOWLASTREV{"State"}%= | Expands to the version number when the document was last in the state _State_. |
+| =%<nop>WORKFLOWLASTTIME{"State"}%= | Expands to the timestamp when the document was last in the _State_ state. For example, =%<nop>WORKFLOWLASTTIME{"APPROVED"}%= would be replaced by the timestamp when the document was last in the =APPROVED= state. |
+| =%<nop>WORKFLOWLASTVERSION{"State"}%= | Expands to a link to the version of the document when it was last in the state _State_. |
 | =%<nop>WORKFLOWSTATE%= | Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned. |
 | =%<nop>WORKFLOWSTATEMESSAGE%= | Expands to the corresponding message in the state table. |
 

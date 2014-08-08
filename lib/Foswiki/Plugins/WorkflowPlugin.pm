@@ -19,8 +19,8 @@ use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
-our $VERSION = '$Rev$';
-our $RELEASE = '1.12.8';
+our $VERSION = '1.13';
+our $RELEASE = '8 August 2014';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -57,7 +57,12 @@ sub initPlugin {
     Foswiki::Func::registerTagHandler( 'WORKFLOWHISTORY', \&_WORKFLOWHISTORY );
     Foswiki::Func::registerTagHandler( 'WORKFLOWTRANSITION',
         \&_WORKFLOWTRANSITION );
-    Foswiki::Func::registerTagHandler( 'WORKFLOWFORK', \&_WORKFLOWFORK );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWFORK',    \&_WORKFLOWFORK );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWLASTREV', \&_WORKFLOWLASTREV );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWLASTTIME',
+        \&_WORKFLOWLASTTIME );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWLASTVERSION',
+        \&_WORKFLOWLASTVERSION );
 
     return 1;
 }
@@ -66,14 +71,13 @@ sub initPlugin {
 sub _initTOPIC {
     my ( $web, $topic, $rev, $meta, $text, $forceNew ) = @_;
 
-    $rev ||= 99999;    # latest
-
     ( $web, $topic ) = Foswiki::Func::normalizeWebTopicName( $web, $topic );
 
     my $controlledTopic;
+    my $cache_id = "$web.$topic." . ( defined $rev ? $rev : '?' );
 
     unless ($forceNew) {
-        $controlledTopic = $cache{"$web.$topic.$rev"};
+        $controlledTopic = $cache{$cache_id};
         if ($controlledTopic) {
             return if $controlledTopic eq '_undef';
             return $controlledTopic;
@@ -90,6 +94,12 @@ sub _initTOPIC {
         # (tm)wiki doesn't have isValidTopicName
         # best we can do
         return undef unless Foswiki::Func::isValidWikiWord($topic);
+    }
+
+    if ( defined &Foswiki::Func::isValidWebName ) {
+
+        # (tm)wiki doesn't have this either
+        return undef unless Foswiki::Func::isValidWebName($web);
     }
 
     Foswiki::Func::pushTopicContext( $web, $topic );
@@ -116,7 +126,7 @@ sub _initTOPIC {
         }
     }
 
-    $cache{"$web.$topic.$rev"} = $controlledTopic || '_undef';
+    $cache{$cache_id} = $controlledTopic || '_undef';
     return $controlledTopic;
 }
 
@@ -475,38 +485,54 @@ sub _changeState {
     return undef;
 }
 
-sub _expandParametedTags {
-    my ( $topic, $web, $tag, $state, $param ) = @_;
+sub _WORKFLOWLASTREV {
+    my ( $session, $attr, $topic, $web ) = @_;
 
-    my $attr = new Foswiki::Attrs($param);
-    my ( $theTopic, $theWeb );
-
-    if ( defined $attr->{_DEFAULT} ) {
-        $theTopic = $attr->{_DEFAULT};
-        $theWeb = defined $attr->{web} ? $attr->{web} : $web;
+    if ( defined $attr->{topic} ) {
+        ( $web, $topic ) =
+          Foswiki::Func::normalizeWebTopicName( $attr->{web} || $web,
+            $attr->{topic} );
     }
-    else {
-        $theTopic = $topic;
-        $theWeb   = $web;
-    }
-
+    my $state = $attr->{_DEFAULT};
+    return '<span class="foswikiAlert">No state given</span>' unless $state;
     my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
-    my $controlledTopic = _initTOPIC( $theWeb, $theTopic, $rev );
-    if ($controlledTopic) {
-        if ( $tag eq 'REV' || $tag eq 'TIME' ) {
-            $tag = 'VERSION' if $tag eq 'REV';
-            return $controlledTopic->getState("LAST${tag}_$state") || '';
-        }
-        else {
-            my $val = $controlledTopic->getState("LAST${tag}_$state");
-            my $url = Foswiki::Func::getScriptUrl( $theWeb, $theTopic, 'view' );
-            return $val
-              ? CGI::a( { href => "$url?rev=$val" }, "revision $val" )
-              : '';
-        }
-    }
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
+    return '' unless $controlledTopic;
+    return $controlledTopic->getState("LASTVERSION_$state") || '';
+}
 
-    return '';
+sub _WORKFLOWLASTTIME {
+    my ( $session, $attr, $topic, $web ) = @_;
+
+    if ( defined $attr->{topic} ) {
+        ( $web, $topic ) =
+          Foswiki::Func::normalizeWebTopicName( $attr->{web} || $web,
+            $attr->{topic} );
+    }
+    my $state = $attr->{_DEFAULT};
+    return '<span class="foswikiAlert">No state given</span>' unless $state;
+    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
+    return '' unless $controlledTopic;
+    return $controlledTopic->getState("LASTTIME_$state") || '';
+}
+
+sub _WORKFLOWLASTVERSION {
+    my $val = _WORKFLOWLASTREV(@_);
+    return '' unless $val =~ /^\d+$/;
+
+    my ( $session, $attr, $topic, $web ) = @_;
+    my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
+    return $val
+      ? CGI::a( { href => "$url?rev=$val" }, "revision $val" )
+      : '';
+}
+
+sub _removedMacro {
+    my ( $macro, $state ) = @_;
+    return <<ALERT;
+<span class="foswikiAlert">The ${macro}_${state} macro has been removed. Please use %<nop>${macro}{"$state"} macro instead.</span>
+ALERT
 }
 
 # Mop up other WORKFLOW tags without individual handlers
@@ -515,7 +541,9 @@ sub commonTagsHandler {
 
     # Expand %WORKFLOWLAST*{"topic" web="web" ...}%
     $_[0] =~
-s/%WORKFLOWLAST(REV|TIME|VERSION)_(\w+){(.*?)}%/_expandParametedTags($topic, $web, $1, $2, $3)/ge;
+      s/(%WORKFLOWLAST(?:REV|TIME|VERSION))_(\w+){.*?}%/_removedMacro($1, $2)/g;
+
+    return unless $text =~ /%^WORKFLOW[A-Z_]*(?:{.*?})?%/;
 
     my $controlledTopic = _initTOPIC( $web, $topic );
     if ($controlledTopic) {
@@ -723,12 +751,35 @@ sub beforeSaveHandler {
             $stateChangeInfo{WORKFLOWWORKFLOW} );
 
         # Can't use initTOPIC, because the data comes from the save
+
         my $workflow =
           new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfw, $wft );
+
+       # Make sure the state transition is legal, in the context of the existing
+       # topic. We have to load the existing meta in order to correctly expand
+       # field references used in the workflow definition. The form in the saved
+       # meta may not have all the required fields.
+        my $oldMeta =
+          Foswiki::Meta->load( $Foswiki::Plugins::SESSION, $web, $topic );
         $controlledTopic =
           new Foswiki::Plugins::WorkflowPlugin::ControlledTopic( $workflow,
-            $web, $topic, $meta, $text );
+            $web, $topic, $oldMeta, $text );
 
+        # Validate the state change
+        if (
+            $stateChangeInfo{WORKFLOWPENDINGSTATE} ne $workflow->getNextState(
+                $controlledTopic, $stateChangeInfo{WORKFLOWPENDINGACTION}
+            )
+          )
+        {
+            die <<OMG;
+Consistency error; WORKFLOWPENDINGSTATE $stateChangeInfo{WORKFLOWPENDINGSTATE}
+cannot be reached from $controlledTopic->getState()
+OMG
+        }
+
+        # Replace the 'old' meta with the 'new' meta composed from the query
+        $controlledTopic->{meta} = $meta;
     }
     else {
 
@@ -743,7 +794,11 @@ sub beforeSaveHandler {
         # The beforeSaveHandler has no way to abort the save,
         # so we have to do a state change without a topic save.
         $controlledTopic->changeState(
-            $stateChangeInfo{WORKFLOWPENDINGACTION} );
+            $stateChangeInfo{WORKFLOWPENDINGACTION},
+            $stateChangeInfo{WORKFLOWPENDINGSTATE} # passed to override the nextState checks
+        );
+
+        # Replace the meta now we've checked
     }
     elsif ( !$controlledTopic->canSave() ) {
 

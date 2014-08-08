@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" date="1401261139" format="1.1" version="1"}%
+%META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
 %META:TOPICPARENT{name="ReferenceManual"}%
 ---+ %TOPIC%
 <!--
@@ -185,6 +185,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 |  Version: | %$VERSION% |
 |  Release: | %$RELEASE% |
 |  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  1.13 (8 Aug 2014) | Foswiki:Main.CrawfordCurrie: Foswikitask:Item12313: replaced WORKFLOWLAST*_* macros with WORKFLOWLAST*{"*"} so they can be handled by registered tag macros. Added test for WORKFLOW* macros to avoid pointless processing. Foswikitask:Item12986: fixed problem with changing forms over a transition |
 |  1.12.8 (13 Jun 2012) | Foswiki:Main.PaulHarvey: Foswikitask:Item11941: fix mis-spelt =%<nop>WORKFLOWEDITTOPIC%= in docs |
 |  1.12.7 (08 Feb 2012) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item11513: fix WORKFLOWHISTORY date field |
 |  1.12.6 (31 Jan 2012) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item11489: fix SEARCH on WORKFLOWHISTORY |
@@ -222,6 +223,6 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 <!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
 
-%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1401261139" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1401261139" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1401261139" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1407507830" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1407507830" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1407507830" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%

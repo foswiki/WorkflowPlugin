@@ -1,7 +1,7 @@
 #
 # Copyright (C) 2005 Thomas Hartkens <thomas@hartkens.de>
 # Copyright (C) 2005 Thomas Weigert <thomas.weigert@motorola.com>
-# Copyright (C) 2008 Crawford Currie http://c-dot.co.uk
+# Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -125,14 +125,12 @@ sub getActions {
     my @actions      = ();
     my $currentState = $topic->getState();
     foreach my $t ( @{ $this->{transitions} } ) {
-        my $allowed   = $topic->expandMacros( $t->{allowed} );
+        next unless $t->{state} eq $currentState;
         my $nextState = $topic->expandMacros( $t->{nextstate} );
-        if (   $t->{state} eq $currentState
-            && _isAllowed($allowed)
-            && $nextState )
-        {
-            push( @actions, $t->{action} );
-        }
+        next unless $nextState;
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        next unless _isAllowed($allowed);
+        push( @actions, $t->{action} );
     }
     return @actions;
 }
@@ -144,15 +142,11 @@ sub getNextState {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
     foreach my $t ( @{ $this->{transitions} } ) {
-        my $allowed   = $topic->expandMacros( $t->{allowed} );
-        my $nextState = $topic->expandMacros( $t->{nextstate} );
-        if (   $t->{state} eq $currentState
-            && $t->{action} eq $action
-            && _isAllowed($allowed)
-            && $nextState )
-        {
-            return $nextState;
-        }
+        next unless $t->{state} eq $currentState && $t->{action} eq $action;
+        my $nextState = $topic->expandMacros( $t->{nextstate} || '' );
+        next unless $nextState;
+        my $allowed = $topic->expandMacros( $t->{allowed} );
+        return $nextState if _isAllowed($allowed);
     }
     return undef;
 }
@@ -164,13 +158,9 @@ sub getNextForm {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
     foreach my $t ( @{ $this->{transitions} } ) {
+        next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        if (   $t->{state} eq $currentState
-            && $t->{action} eq $action
-            && _isAllowed($allowed) )
-        {
-            return $t->{form};
-        }
+        return $t->{form} if _isAllowed($allowed);
     }
     return undef;
 }
@@ -182,13 +172,9 @@ sub getNotifyList {
     my ( $this, $topic, $action ) = @_;
     my $currentState = $topic->getState();
     foreach my $t ( @{ $this->{transitions} } ) {
+        next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        if (   $t->{state} eq $currentState
-            && $t->{action} eq $action
-            && _isAllowed($allowed) )
-        {
-            return $t->{notify};
-        }
+        return $t->{notify} if _isAllowed($allowed);
     }
     return undef;
 }

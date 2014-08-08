@@ -1,7 +1,7 @@
 #
 # Copyright (C) 2005 Thomas Hartkens <thomas@hartkens.de>
 # Copyright (C) 2005 Thomas Weigert <thomas.weigert@motorola.com>
-# Copyright (C) 2008 Crawford Currie http://c-dot.co.uk
+# Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -25,6 +25,8 @@ use strict;
 
 use Foswiki ();         # for regexes
 use Foswiki::Func ();
+
+use constant TRACE => 0;
 
 # Constructor
 sub new {
@@ -192,13 +194,15 @@ sub _isModifiable {
     # is the latest rev (or no rev) loaded?
     $this->{isEditable} = $this->isLatestRev();
 
-    #print STDERR "Modify denied by isLatestRev\n" unless $this->{isEditable};
+    Foswiki::Func::writeDebug "Modify denied by isLatestRev\n"
+      if TRACE && !$this->{isEditable};
 
     # Does the workflow permit editing?
     if ( $this->{isEditable} ) {
         $this->{isEditable} = $this->{workflow}->allowEdit($this);
 
-        #print STDERR "Modify denied by allowEdit\n" unless $this->{isEditable};
+        Foswiki::Func::writeDebug "Modify denied by allowEdit\n"
+          if TRACE && !$this->{isEditable};
     }
 
     # Does Foswiki permit editing?
@@ -211,7 +215,8 @@ sub _isModifiable {
             $this->{text}, $this->{topic}, $this->{web} )
           if $this->{isEditable};
 
-#print STDERR "Modify denied by checkAccessPermission\n" unless $this->{isEditable};
+        Foswiki::Func::writeDebug "Modify denied by checkAccessPermission\n"
+          if TRACE && !$this->{isEditable};
     }
     $this->{isEditable} ||= 0;    # ensure defined
 
@@ -288,13 +293,16 @@ sub newForm {
 }
 
 # change the state of the topic. Does *not* save the updated topic, but
-# does notify the change to listeners.
+# does notify the change to listeners. If $state is not given, looks for the
+# next state given the $action.
 sub changeState {
-    my ( $this, $action ) = @_;
+    my ( $this, $action, $state ) = @_;
 
     return unless $this->isLatestRev();
+    $state ||= $this->{workflow}->getNextState( $this, $action );
+    die "No valid next state for '$action' from " . $this->getState()
+      unless $state;
 
-    my $state = $this->{workflow}->getNextState( $this, $action );
     my $form = $this->{workflow}->getNextForm( $this, $action );
     my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
