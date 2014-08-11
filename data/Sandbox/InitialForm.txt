@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" date="1025373031" format="1.0" version="$Rev$"}%
+%META:TOPICINFO{author="ProjectContributor" date="1407730685" format="1.1" version="1"}%
 %META:TOPICPARENT{name="WebHome"}%
 | *Name* | *Type* | *Size* | *Values* | *Tooltip messages* | *Mandatory* | 
 | Issue Name | text | 73 |  | Illustrative name of issue | M | 
