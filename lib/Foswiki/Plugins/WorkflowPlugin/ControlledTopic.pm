@@ -106,6 +106,7 @@ sub setState {
     return unless $this->isLatestRev();
     $this->{state}->{name} = $state;
     $this->{state}->{"LASTVERSION_$state"} = $version;
+    $this->{state}->{"LASTUSER_$state"} = Foswiki::Func::getCanonicalUserID();
     $this->{state}->{"LASTTIME_$state"} =
       Foswiki::Func::formatTime( time(), undef, 'servertime' );
     $this->{meta}->put( "WORKFLOW", $this->{state} );
