@@ -10,6 +10,7 @@
 | =%<nop>WORKFLOWHISTORY%= | Expands to the history of state transitions the topic has undergone. The format of the history is dictated by the =WORKFLOWHISTORYFORMAT= (described below). |
 | =%<nop>WORKFLOWLASTREV{"State"}%= | Expands to the version number when the document was last in the state _State_. |
 | =%<nop>WORKFLOWLASTTIME{"State"}%= | Expands to the timestamp when the document was last in the _State_ state. For example, =%<nop>WORKFLOWLASTTIME{"APPROVED"}%= would be replaced by the timestamp when the document was last in the =APPROVED= state. |
+| =%<nop>WORKFLOWLASTUSER{"State"}%= | Expands to the last user who transitioned the document into the state _State_. |
 | =%<nop>WORKFLOWLASTVERSION{"State"}%= | Expands to a link to the version of the document when it was last in the state _State_. |
 | =%<nop>WORKFLOWSTATE%= | Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned. |
 | =%<nop>WORKFLOWSTATEMESSAGE%= | Expands to the corresponding message in the state table. |

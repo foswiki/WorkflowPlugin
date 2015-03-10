@@ -63,6 +63,8 @@ sub initPlugin {
         \&_WORKFLOWLASTTIME );
     Foswiki::Func::registerTagHandler( 'WORKFLOWLASTVERSION',
         \&_WORKFLOWLASTVERSION );
+    Foswiki::Func::registerTagHandler( 'WORKFLOWLASTUSER',
+        \&_WORKFLOWLASTUSER );
 
     return 1;
 }
@@ -526,6 +528,22 @@ sub _WORKFLOWLASTVERSION {
     return $val
       ? CGI::a( { href => "$url?rev=$val" }, "revision $val" )
       : '';
+}
+
+sub _WORKFLOWLASTUSER {
+    my ( $session, $attr, $topic, $web ) = @_;
+
+    if ( defined $attr->{topic} ) {
+        ( $web, $topic ) =
+          Foswiki::Func::normalizeWebTopicName( $attr->{web} || $web,
+            $attr->{topic} );
+    }
+    my $state = $attr->{_DEFAULT};
+    return '<span class="foswikiAlert">No state given</span>' unless $state;
+    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
+    my $controlledTopic = _initTOPIC( $web, $topic, $rev );
+    return '' unless $controlledTopic;
+    return $controlledTopic->getState("LASTUSER_$state") || '';
 }
 
 sub _removedMacro {
