@@ -154,6 +154,8 @@ viewed topic:
 | WAITINGFORAPPROVAL | approve  | %META{"formfield" name="ApprovedState"}% | %META{"formfield" name="MayApprove"}% |
 </verbatim>
 
+If you want to exclude the user who changed a specific state last, even though the user is generally allowed to, you can add =not(LASTUSER_{State})= to the =Allowed= column of the transition table and the last user for the specified state will be excluded.
+
 You can also define other macros starting with =WORKFLOW= in the workflow
 description topic. These will be expanded to their defined values in any
 topic that uses the workflow. For example:
