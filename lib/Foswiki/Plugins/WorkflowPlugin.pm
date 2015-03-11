@@ -19,8 +19,8 @@ use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
-our $VERSION = '1.13';
-our $RELEASE = '8 August 2014';
+our $VERSION = '1.14';
+our $RELEASE = '11 March 2015';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -145,7 +145,7 @@ sub _WORKFLOWEDITTOPIC {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -171,7 +171,7 @@ sub _WORKFLOWSTATEMESSAGE {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -184,7 +184,7 @@ sub _WORKFLOWATTACHTOPIC {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -210,7 +210,7 @@ sub _WORKFLOWHISTORY {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -223,7 +223,7 @@ sub _WORKFLOWTRANSITION {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -303,7 +303,7 @@ sub _WORKFLOWSTATE {
 
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -315,7 +315,7 @@ sub _WORKFLOWFORK {
     my ( $session, $attributes, $topic, $web ) = @_;
 
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ /(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
@@ -497,7 +497,7 @@ sub _WORKFLOWLASTREV {
     }
     my $state = $attr->{_DEFAULT};
     return '<span class="foswikiAlert">No state given</span>' unless $state;
-    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
+    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
     return $controlledTopic->getState("LASTVERSION_$state") || '';
@@ -513,7 +513,7 @@ sub _WORKFLOWLASTTIME {
     }
     my $state = $attr->{_DEFAULT};
     return '<span class="foswikiAlert">No state given</span>' unless $state;
-    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ /(\d+)/ ) : ();
+    my ($rev) = defined $attr->{rev} ? ( $attr->{rev} =~ m/(\d+)/ ) : ();
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
     return $controlledTopic->getState("LASTTIME_$state") || '';
@@ -521,7 +521,7 @@ sub _WORKFLOWLASTTIME {
 
 sub _WORKFLOWLASTVERSION {
     my $val = _WORKFLOWLASTREV(@_);
-    return '' unless $val =~ /^\d+$/;
+    return '' unless $val =~ m/^\d+$/;
 
     my ( $session, $attr, $topic, $web ) = @_;
     my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
@@ -561,7 +561,7 @@ sub commonTagsHandler {
     $_[0] =~
       s/(%WORKFLOWLAST(?:REV|TIME|VERSION))_(\w+){.*?}%/_removedMacro($1, $2)/g;
 
-    return unless $text =~ /%^WORKFLOW[A-Z_]*(?:{.*?})?%/;
+    return unless $text =~ m/%^WORKFLOW[A-Z_]*(?:{.*?})?%/;
 
     my $controlledTopic = _initTOPIC( $web, $topic );
     if ($controlledTopic) {
@@ -618,7 +618,7 @@ sub _restFork {
         foreach my $k ( keys %$ttmeta ) {
 
             # Note that we don't carry over the history from the forked topic
-            next if ( $k =~ /^_/ || $k eq 'WORKFLOWHISTORY' );
+            next if ( $k =~ m/^_/ || $k eq 'WORKFLOWHISTORY' );
             my @data;
             foreach my $item ( @{ $ttmeta->{$k} } ) {
                 my %datum = %$item;

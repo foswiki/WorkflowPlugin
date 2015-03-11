@@ -7,15 +7,16 @@
 <div style="float:right">
 %ATTACHURL%/Flow.gif
 </div>
-Foswiki benefits from the fact that every user can modify a topic instantly without restrictions. However sometimes you want to be able to associate a "state" with a topic and then control the work flow that the topic progresses through as content is added. 
+Foswiki provides a flexible system of Access Control Lists that can be used to control who can modify a topic. Sometimes this isn't quite enough, and the access control depends on the state that a topic is in.
+
 For example,
-   * When writing documents compliant with ISO 9000 (e.g. a quality manual), it is essential that documents are approved by the management before they may be applied by the employees.
-   * In a defect tracking data base, defects typically transition through a series of states from submission to resolution, with different actions available depending on the state of the defect.
+   * When writing documents compliant with ISO 9000 (e.g. a quality manual), it is essential that documents are approved by quality control
+   * In a defect tracking data base, defects typically transition through a series of states, from submission to resolution, with different actions available depending on the state of the defect.
    * In a journal database, papers must be reviewed and approved by several experts in the field before being allowed to be published.
 
-This plugin lets you associate a complex work flow with topics in your wiki.
+<nop>WorkflowPlugin lets you associate a state with a topic and then control what other states that the topic can move to. You can define a set of _states_ for controlled topics (e.g. "under revision", "waiting for approval", "approved") and _transitions_ (e.g. "revise", "approve") between these states. Furthermore, you can define which users/groups are permitted to perform specific transistions.
 
-A workflow can be associated with a single topic, or with an entire web. If a topic is under workflow control, you can define a set of _states_ for this topic (e.g. "under revision", "waiting for approval", "approved") and _transitions_ (e.g. "revise", "approve") between these states. Furthermore, you can define which users/groups are permitted to perform specific transistions. In this way, you can control, for example, who is allowed to "approve" a topic and who is not.
+A workflow can be associated with a single topic, or with an entire web. 
 
 <div class="foswikiHelp">
 *Upgrade note* If you are upgrading from a version before 10 Nov 2008 please note that the format of the WORKFLOWHISTORYFORMAT preference has changed slightly, in that:
@@ -108,11 +109,12 @@ Subject: %WIKITOOLNAME%.%WEB%.%TOPIC% - transitioned to %TARGET_STATE%
 Auto-Submitted: auto-generated
 MIME-Version: 1.0
 Content-Type: text/plain
+
 %WIKINAME% has moved the topic %WEB%.%TOPIC% to the %TARGET_STATE% state.  You can view the document here:
 %SCRIPTURL{"view"}%/%WEB%/%TOPIC%
 </verbatim>
 
-Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body begining below the " =Content-Type: text/plain= " line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how WorkflowPlugin expands macros.
+Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body beginning below the first blank line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how !WorkflowPlugin expands macros.
 
 For more sophisticated email notification, you can also write one or more custom email templates for each transition. Custom notification templates can either provide valid headers that define their recipients or access the =EMAILTO= macro, so other email addresses provided will be sent exclusively through custom templates.
 
@@ -176,56 +178,20 @@ This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas Weigert]]'s [[
 
 %$INSTALL_INSTRUCTIONS%
 
-__Note:__ The script =[[%ATTACHURL%/convert.pl.txt][convert.pl.txt]]= will convert topics written for the !ApprovalPlugin to the WorkflowPlugin. The script takes a topic at the standard input and outputs the converted topic on standard output. Rename the file from =convert.pl.txt= to =convert.pl=.
+__Note:__ The script =[[%ATTACHURL%/convert.pl.txt][convert.pl.txt]]= will convert topics written for the !ApprovalPlugin to the !WorkflowPlugin. The script takes a topic at the standard input and outputs the converted topic on standard output. Rename the file from =convert.pl.txt= to =convert.pl=.
 
 Look at the examples in the !Sandbox web.
 
 __Note:__ For strict access control, the plugin should know who is looking at the controlled document/topic at all times.  To enable this, you may want to set up the wiki in such way that users have to log-in *even if they just display a topic*.
 
----++ Info
 
-|  Author(s): | Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie |
-|  Version: | %$VERSION% |
-|  Release: | %$RELEASE% |
-|  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  1.13 (8 Aug 2014) | Foswiki:Main.CrawfordCurrie: Foswikitask:Item12313: replaced WORKFLOWLAST*_* macros with WORKFLOWLAST*{"*"} so they can be handled by registered tag macros. Added test for WORKFLOW* macros to avoid pointless processing. Foswikitask:Item12986: fixed problem with changing forms over a transition |
-|  1.12.8 (13 Jun 2012) | Foswiki:Main.PaulHarvey: Foswikitask:Item11941: fix mis-spelt =%<nop>WORKFLOWEDITTOPIC%= in docs |
-|  1.12.7 (08 Feb 2012) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item11513: fix WORKFLOWHISTORY date field |
-|  1.12.6 (31 Jan 2012) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item11489: fix SEARCH on WORKFLOWHISTORY |
-|  1.12.5 (20 Jan 2012) | Foswiki:Main.CrawfordCurrie: Foswikitask:Item11459: fix bug when used with comment plugin. |
-|  1.12.4 (11 Jan 2012) | Foswiki:Main.MichaelDaum: Foswikitask:Item11430, Foswikitask:Item11419: fixed error in save handler that prevented any edit change to a topic under workflow control |
-|  1.12.3 (10 Jan 2012) | Foswiki:Main.MichaelDaum: Foswikitask:Item11405: fixed performance issue editing topics that are _not_ under workflow control |
-|  1.12.2 (12 Dec 2011) | Foswiki:Main.GilmarSantosJr: Foswikitask:Item10309, Foswikitask:Item9088, Foswikitask:Item11338: make WORKFLOWLAST* accept =topic= and =rev= parameters and report the correct version number. Foswikitask:Item11343: fix =WORKFLOWTRANSITIONCSSCLASS= default value. Foswikitask:Item8002: store =WORKFLOWHISTORY= as 'list' META instead of preformatted string. |
-|  1.12.1 (01 Mar 2011) | Foswikitask:Item10356: Correct parsing of trailing spaces in state and transition tables |
-|  1.12 (23 Feb 2011) | Foswiki:Tasks.Item10008: Implement support for custom email templates on state transition notifications. |
-|  1.11.1 (25 Aug 2010) | Foswiki:Tasks.Item8908: fix obscure error that caused apparently inexplicable crashes; hint: _never_ use $_ as an iterator control variable in your perl code. |
-|  1.11 (15 Jun 2010) | Foswiki:Tasks.Item9142: make the access controls checks more thorough |
-|  1.10 (01 Jun 2010) | Foswiki:Tasks.Item9086: ensure t= is set on all edit links; also validate the workflow name. |
-|  1.9 (31 May 2010) | Crawford Currie: Foswiki:Tasks.Item9072: add WORKFLOWLASTREV_State to show topic revision number Foswiki:Tasks.Item9081: force new topic revision on each state transition to avoid history loss |
-|  1.8.1 (27 May 2010) | Crawford Currie: Foswiki:Tasks.Item9048: Minor doc update |
-|  1.8 (26 May 2010) | Crawford Currie: Foswiki:Tasks.Item2425: allow cancellation of state transitions that involve an edit step. Foswiki:Tasks.Item8321: allow non-wikiword topic names Foswiki:Tasks.Item8320: added $rev to WORKFLOWHISTORYFORMAT Foswiki:Tasks.Item8297: a topic parameter to the view url could bork the transition button Foswiki:Tasks.Item9048: use the =Allow Edit= control to check and limit general saves, such as those done from CommentPlugin |
-|  1.7.1 (03 Feb 2010) | Foswiki:Tasks.Item8462: Andrew Jones made some minor doc fixes |
-|  1.7 (04 Nov 2009) | Foswiki:Tasks.Item2092: Link fork topics mentioned in history Foswiki:Tasks.Item8268: added topic control to WORKFLOWTRANSITION Foswiki:Tasks.Item8306: support fork to multiple topics, changed WORKFLOWFORK parameters for compatibility with other macros |
-|  1.6 (02 Sep 2009) | Foswiki:Tasks.Item1828: Dean Spicer added support for macro expansion of the next state.  Foswiki:Tasks.Item1828: Crawford Currie documented his work, and added support for topic forking. Foswiki:Tasks.Item1828: fixed the defect example. Foswiki:Tasks.Item8172: Dean Spicer added support for cross-topic state and history queries |
-|  1.5.2 (29 Apr 2009) | Foswiki:Tasks.Item8147: fix version recording |
-|  1.5.1 (23 Apr 2009) | Foswiki:Tasks.Item1503: fix collection of notify addresses |
-|  1.5 (09 Apr 2009) | Foswiki:Tasks.Item8107: block transition if topic is being edited by another user |
-|  1.4 (21 Mar 2009) | Dean Spicer/Crawford Currie: Foswiki:Tasks.Item8080: finish porting to Foswiki and support %WORKFLOWATTACHTOPIC |
-|  1.3 (03 Mar 2009) | Crawford Currie: Foswiki:Tasks.Item8069: deny attach on a controlled topic Foswiki:Tasks.Item8070: expand macros in Allow and AllowEdit fields |
-|  1.2 (11 Dec 2008) | Crawford Currie: Foswiki:Tasks.Item8029: support notification of a list of people on state changes |
-|  1.1 (15 Nov 2008) | Crawford Currie: Foswiki:Tasks.Item6114: Fixed format of history Foswiki:Tasks.Item6119: added !InProcessForm and increased defensiveness in a couple of places |
-|  1.0 (10 Nov 2008) | Crawford Currie: Heavily refactored to OO style to ease maintenance. Ensure form is saved when state changes. Support use of '. Split off VarWORKFLOW documentation. Removed 'back door' call that was causing issues, Work supported by http://micralyne.com |
-|  23 Apr 2008 | Crawford Currie: Removed last of the core calls, fixed user management. Work supported by http://www.productbox.co.uk/ |
-|  28 Jan 2008: | Kenneth Lavrsen: Fixed his typo in code. Renamed the convert.pl to convert.pl.txt as most installs do not allow .pl as extension and this creates problems when you want to update attachments |
-|  27 Jan 2008: | Markus Ueberall: Fixed for compatibility with TWiki 4.2.0 |
-|  05 Aug 2006: | Crawford Currie: Converted from !ApprovalPlugin to %TOPIC%. |
-|  16 Feb 2005: | Thomas Hartkens: Initial version of !ApprovalPlugin |
-|  05 Feb 2004: | Thomas Weigert Initial version of !WorkFlowAddOn |
-|  Home: | http://foswiki.org/Extensions/%TOPIC% |
-|  Support: | http://foswiki.org/Support/%TOPIC% |
-
-<!-- Do _not_ attempt to edit this topic; it is auto-generated. -->
-
+%META:FORM{name="PackageForm"}%
+%META:FIELD{name="Author" title="Author" value="Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie"}%
+%META:FIELD{name="Version" title="Version" value="%$VERSION%"}%
+%META:FIELD{name="Release" title="Release" value="%$RELEASE%"}%
+%META:FIELD{name="Repository" attributes="" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
+%META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki./org/Support/WorkflowPlugin"}%
+%META:FIELD{name="Home" attributes="" title="Home" value="http://foswiki.org/Extensions/WorkflowPlugin"}%
 %META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1407507830" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
 %META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1407507830" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
 %META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1407507830" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
