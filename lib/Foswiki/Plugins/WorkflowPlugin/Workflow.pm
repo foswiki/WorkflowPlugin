@@ -129,7 +129,7 @@ sub getActions {
         my $nextState = $topic->expandMacros( $t->{nextstate} );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        next unless _isAllowed($allowed);
+        next unless _isAllowed($allowed, $topic);
         push( @actions, $t->{action} );
     }
     return @actions;
@@ -146,7 +146,7 @@ sub getNextState {
         my $nextState = $topic->expandMacros( $t->{nextstate} || '' );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $nextState if _isAllowed($allowed);
+        return $nextState if _isAllowed($allowed, $topic);
     }
     return undef;
 }
@@ -160,7 +160,7 @@ sub getNextForm {
     foreach my $t ( @{ $this->{transitions} } ) {
         next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $t->{form} if _isAllowed($allowed);
+        return $t->{form} if _isAllowed($allowed, $topic);
     }
     return undef;
 }
@@ -174,7 +174,7 @@ sub getNotifyList {
     foreach my $t ( @{ $this->{transitions} } ) {
         next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $t->{notify} if _isAllowed($allowed);
+        return $t->{notify} if _isAllowed($allowed, $topic);
     }
     return undef;
 }
@@ -202,7 +202,7 @@ sub allowEdit {
     return 0 unless $this->{states}->{$state};
     my $allowed =
       $topic->expandMacros( $this->{states}->{$state}->{allowedit} );
-    return _isAllowed($allowed);
+    return _isAllowed($allowed, $topic);
 }
 
 # finds out if the current user is allowed to do something.
@@ -210,7 +210,7 @@ sub allowEdit {
 # (comma,space)-separated list $allow, or they are a member
 # of a group in the list.
 sub _isAllowed {
-    my ($allow) = @_;
+    my ($allow, $topic) = @_;
 
     return 1 unless ($allow);
 
@@ -229,6 +229,19 @@ sub _isAllowed {
     }
 
     return 0 if ( defined($allow) && $allow =~ /^\s*nobody\s*$/ );
+    
+    #if a not(LASTUSER_{state}) is configured, translate this to a wikiname
+    #and authorize the current user
+    my $thisUser = Foswiki::Func::getWikiName();
+    foreach my $allowed ( split( /\s*,\s*/, $allow ) ) {
+        ( my $waste, $allowed ) = 
+            Foswiki::Func::normalizeWebTopicName( undef, $allowed );
+        if ( $allowed =~ /^not\((LASTUSER_.+)\)$/ ) {
+            my $notAllowed = $topic->getState( $1 );
+            $notAllowed =~ s/^.*\.//;    # strip web
+            return 0 if $thisUser eq $notAllowed;
+        }
+    }
 
     if ( ref( $Foswiki::Plugins::SESSION->{user} )
         && $Foswiki::Plugins::SESSION->{user}->can("isInList") )
@@ -236,7 +249,6 @@ sub _isAllowed {
         return $Foswiki::Plugins::SESSION->{user}->isInList($allow);
     }
     elsif ( defined &Foswiki::Func::isGroup ) {
-        my $thisUser = Foswiki::Func::getWikiName();
         foreach my $allowed ( split( /\s*,\s*/, $allow ) ) {
             ( my $waste, $allowed ) =
               Foswiki::Func::normalizeWebTopicName( undef, $allowed );

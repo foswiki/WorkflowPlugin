@@ -95,6 +95,7 @@ If a *Notify* column is given, that column can contain a comma-separated list of
 | Email addresses | webmaster@example.com | |
 | User wiki names | Main.WikiGuest | |
 | Wiki group names | Main.AdminGroup | |
+| Workflow Attribute names | LASTUSER_APPROVED | LASTUSER_{State} |
 | Email templates | =template(!Web.MyTopic)= | Must be wrapped in parentheses and proceeded by the word =template=, all lowercase, no spaces. |
 
 When a transition is fired, any email addresses provided in the *Notify* column (or resolved from wiki/group names) will be notified, with a message formatted according to the default email template provided with the plugin.  You can override this template by setting the =WORKFLOWDEFAULTEMAILTEMPLATE= preference in your workflow description topic.  Set that to a topic that contains a valid email notification template (see example below), and all email addresses provided will receive messages formatted according to that template:
@@ -113,7 +114,7 @@ Content-Type: text/plain
 
 Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body begining below the " =Content-Type: text/plain= " line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how WorkflowPlugin expands macros.
 
-For more sophisticated email notification, you can also write one or more custom email templates for each transition.  Email notification templates are *completely independent* of both the default email template and other email adresses or usernames provided in the *Notify* column for their transition.  Custom notification templates must provide valid headers that define their recipients, and they do not have access to the =EMAILTO= macro, so other email addresses provided will *not* be sent through custom templates (but they can still go out through the default email template).
+For more sophisticated email notification, you can also write one or more custom email templates for each transition. Custom notification templates can either provide valid headers that define their recipients or access the =EMAILTO= macro, so other email addresses provided will be sent exclusively through custom templates.
 
 For example, the *Notify* column in the transition below will email =jim@example.com= using the default template, and execute both the =EmailOne= and =EmailTwo= templates, sending the results to whatever email addresses are defined on their respective =To=, =Cc=, or =Bcc= lines:
 <verbatim>
@@ -152,6 +153,8 @@ viewed topic:
 | *State*            | *Action* | *Next State*                             | *Allowed*                        |
 | WAITINGFORAPPROVAL | approve  | %META{"formfield" name="ApprovedState"}% | %META{"formfield" name="MayApprove"}% |
 </verbatim>
+
+If you want to exclude the user who changed a specific state last, even though the user is generally allowed to, you can add =not(LASTUSER_{State})= to the =Allowed= column of the transition table and the last user for the specified state will be excluded.
 
 You can also define other macros starting with =WORKFLOW= in the workflow
 description topic. These will be expanded to their defined values in any
