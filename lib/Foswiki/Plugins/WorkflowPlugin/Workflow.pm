@@ -62,7 +62,7 @@ sub new {
 
     # Yet another table parser
     # State table:
-    # | *State*       | *Allow Edit* | *Message* |
+    # | *State*  | *Allow View* | *Allow Edit* | *Message* |
     # Transition table:
     # | *State* | *Action* | *Next state* | *Allowed* |
     foreach my $line ( split( /\n/, $text ) ) {
@@ -79,6 +79,7 @@ sub new {
         }
         elsif (
             $line =~ s/^\s*\|([\s*]*State[\s*]*\|
+			      (?:[\s*]*Allow\s*View[\s*]*\|)?
                               [\s*]*Allow\s*Edit[\s*]*\|.*)\|$/$1/ix
           )
         {
@@ -129,7 +130,7 @@ sub getActions {
         my $nextState = $topic->expandMacros( $t->{nextstate} );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        next unless _isAllowed($allowed, $topic);
+        next unless _isAllowed( $allowed, $topic );
         push( @actions, $t->{action} );
     }
     return @actions;
@@ -146,7 +147,7 @@ sub getNextState {
         my $nextState = $topic->expandMacros( $t->{nextstate} || '' );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $nextState if _isAllowed($allowed, $topic);
+        return $nextState if _isAllowed( $allowed, $topic );
     }
     return undef;
 }
@@ -160,7 +161,7 @@ sub getNextForm {
     foreach my $t ( @{ $this->{transitions} } ) {
         next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $t->{form} if _isAllowed($allowed, $topic);
+        return $t->{form} if _isAllowed( $allowed, $topic );
     }
     return undef;
 }
@@ -174,7 +175,7 @@ sub getNotifyList {
     foreach my $t ( @{ $this->{transitions} } ) {
         next unless $t->{state} eq $currentState && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
-        return $t->{notify} if _isAllowed($allowed, $topic);
+        return $t->{notify} if _isAllowed( $allowed, $topic );
     }
     return undef;
 }
@@ -201,8 +202,20 @@ sub allowEdit {
     my $state = $topic->getState();
     return 0 unless $this->{states}->{$state};
     my $allowed =
-      $topic->expandMacros( $this->{states}->{$state}->{allowedit} );
-    return _isAllowed($allowed, $topic);
+      $topic->expandMacros( $this->{states}->{$state}->{allowedit} || '' );
+    return _isAllowed( $allowed, $topic );
+}
+
+# Determine if the current user is allowed to view a topic that is in
+# the given state.
+sub allowView {
+    my ( $this, $topic ) = @_;
+
+    my $state = $topic->getState();
+    return 0 unless $this->{states}->{$state};
+    my $allowed =
+      $topic->expandMacros( $this->{states}->{$state}->{allowview} || '' );
+    return _isAllowed( $allowed, $topic );
 }
 
 # finds out if the current user is allowed to do something.
@@ -210,7 +223,7 @@ sub allowEdit {
 # (comma,space)-separated list $allow, or they are a member
 # of a group in the list.
 sub _isAllowed {
-    my ($allow, $topic) = @_;
+    my ( $allow, $topic ) = @_;
 
     return 1 unless ($allow);
 
@@ -229,15 +242,15 @@ sub _isAllowed {
     }
 
     return 0 if ( defined($allow) && $allow =~ /^\s*nobody\s*$/ );
-    
+
     #if a not(LASTUSER_{state}) is configured, translate this to a wikiname
     #and authorize the current user
     my $thisUser = Foswiki::Func::getWikiName();
     foreach my $allowed ( split( /\s*,\s*/, $allow ) ) {
-        ( my $waste, $allowed ) = 
-            Foswiki::Func::normalizeWebTopicName( undef, $allowed );
+        ( my $waste, $allowed ) =
+          Foswiki::Func::normalizeWebTopicName( undef, $allowed );
         if ( $allowed =~ /^not\((LASTUSER_.+)\)$/ ) {
-            my $notAllowed = $topic->getState( $1 );
+            my $notAllowed = $topic->getState($1);
             $notAllowed =~ s/^.*\.//;    # strip web
             return 0 if $thisUser eq $notAllowed;
         }

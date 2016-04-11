@@ -36,11 +36,13 @@ sub initPlugin {
     Foswiki::Func::registerRESTHandler(
         'changeState', \&_changeState,
         authenticate => 1,
+        validate     => 1,
         http_allow   => 'POST'
     );
     Foswiki::Func::registerRESTHandler(
         'fork', \&_restFork,
         authenticate => 1,
+        validate     => 1,
         http_allow   => 'POST'
     );
 
@@ -65,6 +67,12 @@ sub initPlugin {
         \&_WORKFLOWLASTVERSION );
     Foswiki::Func::registerTagHandler( 'WORKFLOWLASTUSER',
         \&_WORKFLOWLASTUSER );
+
+    if ( $Foswiki::cfg{Plugins}{SolrPlugin}{Enabled} ) {
+        require Foswiki::Plugins::SolrPlugin;
+        Foswiki::Plugins::SolrPlugin::registerIndexTopicHandler(
+            \&_solrIndexTopicHandler );
+    }
 
     return 1;
 }
@@ -108,21 +116,28 @@ sub _initTOPIC {
     my $workflowName = Foswiki::Func::getPreferencesValue('WORKFLOW');
     Foswiki::Func::popTopicContext( $web, $topic );
 
+    ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic, $rev )
+      unless defined $meta;
+
+    unless ($workflowName) {
+
+        # get from formfield
+        my $field = $meta->get( "FIELD", "Workflow" );
+        $workflowName = $field->{value} if defined $field;
+    }
+
     if ($workflowName) {
         ( my $wfWeb, $workflowName ) =
           Foswiki::Func::normalizeWebTopicName( $web, $workflowName );
 
         if ( Foswiki::Func::topicExists( $wfWeb, $workflowName ) ) {
             my $workflow =
-              new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfWeb,
+              Foswiki::Plugins::WorkflowPlugin::Workflow->new( $wfWeb,
                 $workflowName );
 
             if ($workflow) {
-                ( $meta, $text ) =
-                  Foswiki::Func::readTopic( $web, $topic, $rev )
-                  unless defined $meta;
                 $controlledTopic =
-                  new Foswiki::Plugins::WorkflowPlugin::ControlledTopic(
+                  Foswiki::Plugins::WorkflowPlugin::ControlledTopic->new(
                     $workflow, $web, $topic, $meta, $text );
             }
         }
@@ -214,7 +229,7 @@ sub _WORKFLOWHISTORY {
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
-    return $controlledTopic->getHistoryText();
+    return $controlledTopic->getHistoryText($attributes);
 }
 
 # Tag handler
@@ -304,10 +319,50 @@ sub _WORKFLOWSTATE {
     ( $web, $topic ) = _getTopicName( $attributes, $web, $topic );
     my ($rev) =
       defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
+
     my $controlledTopic = _initTOPIC( $web, $topic, $rev );
     return '' unless $controlledTopic;
 
-    return $controlledTopic->getState();
+    my $state = $attributes->{state};
+    $state ||= $controlledTopic->getState();
+
+    my $lastVersion = $controlledTopic->getState("LASTVERSION_$state") || '';
+    my $hideNull = Foswiki::Func::isTrue( $attributes->{hidenull}, 0 );
+    return '' if $hideNull && !$lastVersion;
+
+    my $workflow = $controlledTopic->{workflow};
+
+    my $message     = $controlledTopic->getStateMessage($state);
+    my $lastUser    = $controlledTopic->getState("LASTUSER_$state") || '';
+    my $lastTime    = $controlledTopic->getState("LASTTIME_$state") || '';
+    my $lastComment = $controlledTopic->getState("LASTCOMMENT_$state") || '';
+
+    my @actions    = $controlledTopic->getActions();
+    my $actions    = join( ", ", @actions );
+    my $numActions = scalar(@actions);
+
+    my $allowEdit = $workflow->{states}->{$state}->{allowedit};
+    $allowEdit = $controlledTopic->expandMacros($allowEdit);
+
+    my $allowView = $workflow->{states}->{$state}->{allowview} || '';
+    $allowView = $controlledTopic->expandMacros($allowView);
+
+    my $result = $attributes->{format} || '$state';
+
+    $result =~ s/\$web/$web/g;
+    $result =~ s/\$topic/$topic/g;
+    $result =~ s/\$state/$state/g;
+    $result =~ s/\$message/$message/g;
+    $result =~ s/\$rev/$lastVersion/g;
+    $result =~ s/\$user/$lastUser/g;
+    $result =~ s/\$time/$lastTime/g;
+    $result =~ s/\$comment/$lastComment/g;
+    $result =~ s/\$numactions/$numActions/g;
+    $result =~ s/\$actions/$actions/g;
+    $result =~ s/\$(allowed|allowedit)/$allowEdit/g;
+    $result =~ s/\$allowview/$allowView/g;
+
+    return Foswiki::Func::decodeFormatTokens($result);
 }
 
 # Tag handler
@@ -392,8 +447,9 @@ sub _changeState {
         return undef;
     }
 
-    my $action = $query->param('WORKFLOWACTION');
-    my $state  = $query->param('WORKFLOWSTATE');
+    my $action  = $query->param('WORKFLOWACTION');
+    my $state   = $query->param('WORKFLOWSTATE');
+    my $comment = $query->param('WORKFLOWCOMMENT');
     die "BAD STATE $action $state!=", $controlledTopic->getState()
       unless $action
       && $state
@@ -420,6 +476,7 @@ sub _changeState {
                     param2   => $t,
                     param3   => $state,
                     param4   => $action,
+                    param5   => $comment,
                 );
                 Foswiki::Func::redirectCgiQuery( undef, $url );
                 return undef;
@@ -444,6 +501,7 @@ sub _changeState {
 
                     # pass info about pending state change
                     template              => 'workflowedit',
+                    WORKFLOWCOMMENT       => $comment,
                     WORKFLOWPENDINGACTION => $action,
                     WORKFLOWCURRENTSTATE  => $state,
                     WORKFLOWPENDINGSTATE =>
@@ -452,12 +510,14 @@ sub _changeState {
                 );
             }
             else {
-                $controlledTopic->changeState($action);
+                $controlledTopic->changeState( $action, undef, $comment );
 
                 # Flag that this is a state change to the beforeSaveHandler
                 local $isStateChange = 1;
                 $controlledTopic->save();
+
                 $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
+                $url = $session->redirectto($url);
             }
 
             Foswiki::Func::redirectCgiQuery( undef, $url );
@@ -561,7 +621,7 @@ sub commonTagsHandler {
     $_[0] =~
       s/(%WORKFLOWLAST(?:REV|TIME|VERSION))_(\w+){.*?}%/_removedMacro($1, $2)/g;
 
-    return unless $text =~ m/%^WORKFLOW[A-Z_]*(?:{.*?})?%/;
+    return unless $text =~ m/%WORKFLOW[A-Z_]*(?:{.*?})?%/;
 
     my $controlledTopic = _initTOPIC( $web, $topic );
     if ($controlledTopic) {
@@ -612,7 +672,7 @@ sub _restFork {
 "<span class='foswikiAlert'>WORKFLOWFORK: '$w.$t' already exists</span>";
         }
         my $text = $tttext;
-        my $meta = new Foswiki::Meta( $session, $w, $t );
+        my $meta = Foswiki::Meta->new( $session, $w, $t );
 
         # Clone the template
         foreach my $k ( keys %$ttmeta ) {
@@ -771,7 +831,7 @@ sub beforeSaveHandler {
         # Can't use initTOPIC, because the data comes from the save
 
         my $workflow =
-          new Foswiki::Plugins::WorkflowPlugin::Workflow( $wfw, $wft );
+          Foswiki::Plugins::WorkflowPlugin::Workflow->new( $wfw, $wft );
 
        # Make sure the state transition is legal, in the context of the existing
        # topic. We have to load the existing meta in order to correctly expand
@@ -780,7 +840,7 @@ sub beforeSaveHandler {
         my $oldMeta =
           Foswiki::Meta->load( $Foswiki::Plugins::SESSION, $web, $topic );
         $controlledTopic =
-          new Foswiki::Plugins::WorkflowPlugin::ControlledTopic( $workflow,
+          Foswiki::Plugins::WorkflowPlugin::ControlledTopic->new( $workflow,
             $web, $topic, $oldMeta, $text );
 
         # Validate the state change
@@ -818,21 +878,6 @@ OMG
 
         # Replace the meta now we've checked
     }
-    elsif ( !$controlledTopic->canSave() ) {
-
-        # Not a state change, make sure the AllowEdit in the state table
-        # permits this action
-        throw Foswiki::OopsException(
-            'accessdenied',
-            def    => 'topic_access',
-            web    => $_[2],
-            topic  => $_[1],
-            params => [
-                'Save topic',
-'You are not permitted to save this topic. You have been denied access by Workflow Plugin'
-            ]
-        );
-    }
 }
 
 sub afterSaveHandler {
@@ -842,8 +887,6 @@ sub afterSaveHandler {
 
     my $controlledTopic = _initTOPIC( $web, $topic, undef, $meta, $text, 1 );
     return unless $controlledTopic;
-
-    my $mustSave = 0;
 
     my @hist = $controlledTopic->{meta}->find('WORKFLOWHISTORY');
     for ( my $h = 0 ; $h < @hist ; $h++ ) {
@@ -855,22 +898,70 @@ sub afterSaveHandler {
     if (@hist) {
         $controlledTopic->{meta}->remove('WORKFLOWHISTORY');
         $controlledTopic->{meta}->putAll( 'WORKFLOWHISTORY', @hist );
-        $mustSave = 1;
     }
 
-    my $lastRev = $controlledTopic->getState(
-        'LASTVERSION_' . $controlledTopic->getState() );
+    my $workflow = $controlledTopic->{workflow};
+    my $state    = $controlledTopic->getState();
 
-    return
-      if !$mustSave && defined $lastRev && $lastRev == $meta->getLatestRev();
+    # set/unset edit rights
+    my $allowEdit = $workflow->{states}->{$state}->{allowedit};
+    $allowEdit = $controlledTopic->expandMacros($allowEdit);
 
-    $controlledTopic->setState( $controlledTopic->getState(),
-        $meta->getLatestRev() );
+    if ($allowEdit) {
+        $controlledTopic->{meta}->putKeyed(
+            'PREFERENCE',
+            {
+                name  => 'ALLOWTOPICCHANGE',
+                title => 'ALLOWTOPICCHANGE',
+                value => $allowEdit,
+                type  => 'Set'
+            }
+        );
+    }
+    else {
+        $controlledTopic->{meta}->remove( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
+    }
+
+    # set/unset view rights
+    my $allowView = $workflow->{states}->{$state}->{allowview} || '';
+    $allowView = $controlledTopic->expandMacros($allowView);
+
+    if ($allowView) {
+        $controlledTopic->{meta}->putKeyed(
+            'PREFERENCE',
+            {
+                name  => 'ALLOWTOPICVIEW',
+                title => 'ALLOWTOPICVIEW',
+                value => $allowView,
+                type  => 'Set'
+            }
+        );
+    }
+    else {
+        $controlledTopic->{meta}->remove( 'PREFERENCE', 'ALLOWTOPICVIEW' );
+    }
+
+    my $key = $state;
+    $key =~ s/ +/_/g;
+
+    my $comment = $controlledTopic->getState( 'LASTCOMMENT_' . $key );
+    $controlledTopic->setState( $state, $meta->getLatestRev(), $comment );
 
     try {
         $controlledTopic->{meta}
           ->saveAs( $web, $topic, dontlog => 1, minor => 1 );
     };
+}
+
+sub _solrIndexTopicHandler {
+    my ( $indexer, $doc, $web, $topic, $meta, $text ) = @_;
+
+    my $controlledTopic = _initTOPIC( $web, $topic );
+    return '' unless $controlledTopic;
+
+    my $state = $controlledTopic->getState();
+
+    $doc->add_fields( "field_WorkflowState_s" => $state );
 }
 
 1;

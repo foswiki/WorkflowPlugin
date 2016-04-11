@@ -89,6 +89,8 @@ sub getState {
     my $this = shift;
     my $key  = shift;
 
+    $key =~ s/ +/_/g;
+
     return defined $key
       ? $this->{state}->{$key}
       : ( $this->{state}->{name} || $this->{workflow}->getDefaultState() );
@@ -97,30 +99,37 @@ sub getState {
 # Get the available actions from the current state
 sub getActions {
     my $this = shift;
-    return $this->isLatestRev() ? $this->{workflow}->getActions($this) : ();
+    return $this->{workflow}->getActions($this);
 }
 
 # Set the current state in the topic
 sub setState {
-    my ( $this, $state, $version ) = @_;
+    my ( $this, $state, $version, $comment ) = @_;
     return unless $this->isLatestRev();
-    $this->{state}->{name} = $state;
-    $this->{state}->{"LASTVERSION_$state"} = $version;
-    $this->{state}->{"LASTUSER_$state"} = Foswiki::Func::getWikiUserName();
-    $this->{state}->{"LASTTIME_$state"} =
+
+    my $key = $state;
+    $key =~ s/ +/_/g;
+
+    $this->{state}->{name}               = $state;
+    $this->{state}->{"LASTVERSION_$key"} = $version;
+    $this->{state}->{"LASTUSER_$key"}    = Foswiki::Func::getWikiUserName();
+    $this->{state}->{"LASTTIME_$key"} =
       Foswiki::Func::formatTime( time(), undef, 'servertime' );
+    $this->{state}->{"LASTCOMMENT_$key"} = $comment || '';
     $this->{meta}->put( "WORKFLOW", $this->{state} );
 }
 
 # Get the appropriate message for the current state
 sub getStateMessage {
-    my $this = shift;
-    return $this->{workflow}->getMessage( $this->getState() );
+    my $this  = shift;
+    my $state = shift;
+    $state = $this->getState() unless defined $state;
+    return $this->{workflow}->getMessage($state);
 }
 
 # Get the history string for the topic
 sub getHistoryText {
-    my $this = shift;
+    my ( $this, $params ) = @_;
 
     return ''
       unless @{ $this->{history}->{data} } || $this->{history}->{legacy};
@@ -130,43 +139,58 @@ sub getHistoryText {
       ? $this->{history}->{legacy}
       : '';
 
-    my $fmt = Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
+    my $header    = $params->{header}    || '';
+    my $footer    = $params->{footer}    || '';
+    my $separator = $params->{separator} || '';
+    my $fmt =
+         $params->{format}
+      || Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
       || '<br>$state -- $date';
+
+    my $include = $params->{include};
+    my $exclude = $params->{exclude};
+
+    my @results = ();
+    my $index   = 0;
     foreach my $hist ( @{ $this->{history}->{data} } ) {
+        next if $include && $hist->{state} !~ /$include/;
+        next if $exclude && $hist->{state} =~ /$exclude/;
+        $index++;
+
+        my $tmpl;
         if ( $hist->{forkto} ) {
-            $histStr .=
-                "<br>Forked to "
+            $tmpl =
+                "Forked to "
               . join( ', ', map { "[[$_]]" } split /\s*,\s*/, $hist->{forkto} )
               . " by $hist->{author} at "
               . Foswiki::Func::formatTime( $hist->{date}, undef, 'servertime' );
         }
         elsif ( $hist->{forkfrom} ) {
-            $histStr .=
-              "<br>Forked from [[$hist->{forkfrom}]] by $hist->{author} at "
+            $tmpl =
+              "Forked from [[$hist->{forkfrom}]] by $hist->{author} at "
               . Foswiki::Func::formatTime( $hist->{date}, undef, 'servertime' );
         }
         else {
-            my $tmpl = $fmt;
-            $tmpl =~ s/\$wikiusername/$hist->{author}/go;
-            $tmpl =~ s/\$state/$hist->{state}/go;
+            $tmpl = $fmt;
+            $tmpl =~ s/\$wikiusername/$hist->{author}/g;
+            $tmpl =~ s/\$state/$hist->{state}/g;
+            $tmpl =~ s/\$rev/$hist->{name}/g;
             $tmpl =~
-s/\$date/Foswiki::Func::formatTime($hist->{date}, undef, 'servertime')/geo;
-            $tmpl =~ s/\$rev/$hist->{name}/go;
-            if ( defined &Foswiki::Func::decodeFormatTokens ) {
-
-                # Compatibility note: also expands $percnt etc.
-                $tmpl = Foswiki::Func::decodeFormatTokens($tmpl);
-            }
-            else {
-                my $mixedAlpha = $Foswiki::regex{mixedAlpha};
-                $tmpl =~ s/\$quot/\"/go;
-                $tmpl =~ s/\$n/\n/go;
-                $tmpl =~ s/\$n\(\)/\n/go;
-                $tmpl =~ s/\$n([^$mixedAlpha]|$)/\n$1/gos;
-            }
-            $histStr .= $tmpl;
+s/\$(day|dow|email|epoch|hours|http|isotz|minutes|mo|month|rcs|seconds|tz|wday|we|week|ye|year)\b/Foswiki::Func::formatTime($hist->{date}, '$'.$1)/ge;
+            $tmpl =~
+s/\$date/Foswiki::Func::formatTime($hist->{date}, undef, 'servertime')/ge;
+            $tmpl =~ s/\$comment/$hist->{comment}/g;
+            $tmpl =~ s/\$index/$index/g;
         }
+        push @results, $tmpl if defined $tmpl;
     }
+
+    my $result = "";
+    $result = $header . join( $separator, @results ) . $footer;
+    $result =~ s/\$count/$index/g;
+
+    $histStr .= Foswiki::Func::decodeFormatTokens($result)
+      if @results;
 
     return $histStr;
 }
@@ -179,6 +203,7 @@ sub haveNextState {
 
 sub isLatestRev {
     my $this = shift;
+
     return !defined $this->{meta}->getLoadedRev()
       || $this->{meta}->getLatestRev() == $this->{meta}->getLoadedRev();
 }
@@ -189,21 +214,23 @@ sub _isModifiable {
     my ($this) = @_;
     my $meta = $this->{meta};
 
+    return 1 if ( Foswiki::Func::isAnAdmin() );
+
     return $this->{isEditable} if defined $this->{isEditable};
-
-    # See if the workflow allows an edit
-    # is the latest rev (or no rev) loaded?
-    $this->{isEditable} = $this->isLatestRev();
-
-    Foswiki::Func::writeDebug "Modify denied by isLatestRev\n"
-      if TRACE && !$this->{isEditable};
 
     # Does the workflow permit editing?
     if ( $this->{isEditable} ) {
-        $this->{isEditable} = $this->{workflow}->allowEdit($this);
+        $this->{isEditable} = $this->{workflow}->allowView($this);
 
-        Foswiki::Func::writeDebug "Modify denied by allowEdit\n"
+        Foswiki::Func::writeDebug "Modify denied by allowView\n"
           if TRACE && !$this->{isEditable};
+
+        if ( $this->{isEditable} ) {
+            $this->{isEditable} = $this->{workflow}->allowEdit($this);
+
+            Foswiki::Func::writeDebug "Modify denied by allowEdit\n"
+              if TRACE && !$this->{isEditable};
+        }
     }
 
     # Does Foswiki permit editing?
@@ -222,6 +249,43 @@ sub _isModifiable {
     $this->{isEditable} ||= 0;    # ensure defined
 
     return $this->{isEditable};
+}
+
+sub _isViewable {
+    my ($this) = @_;
+    my $meta = $this->{meta};
+
+    return 1 if ( Foswiki::Func::isAnAdmin() );
+
+    return $this->{isViewable} if defined $this->{isViewable};
+
+    # Does the workflow permit viewing?
+    $this->{isViewable} = $this->{workflow}->allowView($this);
+
+    Foswiki::Func::writeDebug "View denied by allowView\n"
+      if TRACE && !$this->{isEditable};
+
+    # Does Foswiki permit editing?
+    if ( $this->{isViewable} ) {
+
+        # DO NOT PASS $this->{meta}, because of Item11461
+        $this->{isViewable} =
+          Foswiki::Func::checkAccessPermission( 'VIEW',
+            $Foswiki::Plugins::SESSION->{user},
+            $this->{text}, $this->{topic}, $this->{web} );
+
+        Foswiki::Func::writeDebug "View denied by checkAccessPermission\n"
+          if TRACE && !$this->{isViewable};
+    }
+    $this->{isViewable} ||= 0;    # ensure defined
+
+    return $this->{isViewable};
+}
+
+# Return tue if this topic is viewable
+sub canView {
+    my $this = shift;
+    return $this->_isViewable();
 }
 
 # Return tue if this topic is editable
@@ -297,7 +361,7 @@ sub newForm {
 # does notify the change to listeners. If $state is not given, looks for the
 # next state given the $action.
 sub changeState {
-    my ( $this, $action, $state ) = @_;
+    my ( $this, $action, $state, $comment ) = @_;
 
     return unless $this->isLatestRev();
     $state ||= $this->{workflow}->getNextState( $this, $action );
@@ -314,14 +378,15 @@ sub changeState {
           ( $info->{date}, $info->{author}, $info->{version} );
     }
 
-    $this->setState( $state, $version );
+    $this->setState( $state, $version, $comment );
 
     push @{ $this->{history}->{data} },
       {
-        name   => -1,
-        state  => $this->getState(),
-        author => Foswiki::Func::getWikiUserName(),
-        date   => $revdate,
+        name    => -1,
+        state   => $this->getState(),
+        author  => Foswiki::Func::getWikiUserName(),
+        date    => $revdate,
+        comment => $comment,
       };
     $this->{meta}->putAll(
         "WORKFLOWHISTORY",
@@ -362,7 +427,14 @@ sub changeState {
                 {
                     ( undef, $currenttemplatetext ) =
                       Foswiki::Func::readTopic( $webtopic[0], $webtopic[1] );
-                    push( @templates, $currenttemplatetext );
+                    push(
+                        @templates,
+                        {
+                            text  => $currenttemplatetext,
+                            web   => $webtopic[0],
+                            topic => $webtopic[1],
+                        }
+                    );
                 }
                 else {
                     Foswiki::Func::writeWarning( __PACKAGE__
@@ -374,10 +446,11 @@ sub changeState {
             }
             else {
                 if ( $who =~ /^LASTUSER_.+$/ ) {
+
                     #extract LASTUSER from workflow-attribute
-                    $who = $this->getState( $who );
+                    $who = $this->getState($who);
                 }
-            
+
                 $who =~ s/^.*\.//;    # web name?
                 my @list = Foswiki::Func::wikinameToEmails($who);
                 if ( scalar(@list) ) {
@@ -426,37 +499,50 @@ sub changeState {
             my $tofield = join( ', ', @emails );
 
             Foswiki::Func::setPreferencesValue( 'EMAILTO', $tofield );
-            
-            #if this workflow has a custom email template defined via the notify-column
-            #use only this template
+
+     #if this workflow has a custom email template defined via the notify-column
+     #use only this template
             if ( scalar(@templates) ) {
                 foreach my $template (@templates) {
                     Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                         $this->getState() );
-                    $template = $this->expandMacros($template);
-                    my $errors = Foswiki::Func::sendEmail( $template, 5 );
+                    Foswiki::Func::setPreferencesValue( 'TEMPLATE',
+                        $template->{web} . "." . $template->{topic} );
+                    $template->{text} =
+                      $this->expandMacros( $template->{text} );
+
+#print STDERR "1: template=$template->{web}.$template->{topic}, email=$template->{text}\n";
+                    my $errors =
+                      Foswiki::Func::sendEmail( $template->{text}, 3 );
                     if ($errors) {
                         Foswiki::Func::writeWarning(
                             'Failed to send transition mails: ' . $errors );
                     }
                 }
-            } else {
+            }
+            else {
                 Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                     $this->getState() );
                 $text = $this->expandMacros($text);
-                my $errors = Foswiki::Func::sendEmail( $text, 5 );
+                my $errors = Foswiki::Func::sendEmail( $text, 3 );
                 if ($errors) {
                     Foswiki::Func::writeWarning(
                         'Failed to send transition mails: ' . $errors );
                 }
             }
-        } elsif ( scalar(@templates) ) {
-            #if no emails are specified, try to send the custom templates anyways
+        }
+        elsif ( scalar(@templates) ) {
+
+           #if no emails are specified, try to send the custom templates anyways
             foreach my $template (@templates) {
                 Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                     $this->getState() );
-                $template = $this->expandMacros($template);
-                my $errors = Foswiki::Func::sendEmail( $template, 5 );
+                Foswiki::Func::setPreferencesValue( 'TEMPLATE',
+                    $template->{web} . "." . $template->{topic} );
+                $template->{text} = $this->expandMacros( $template->{text} );
+
+#print STDERR "2: template=$template->{web}.$template->{topic}, email=$template->{text}\n";
+                my $errors = Foswiki::Func::sendEmail( $template->{text}, 3 );
                 if ($errors) {
                     Foswiki::Func::writeWarning(
                         'Failed to send transition mails: ' . $errors );
@@ -473,8 +559,6 @@ sub changeState {
 sub save {
     my $this = shift;
 
-    return unless $this->isLatestRev();
-
     Foswiki::Func::saveTopic( $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { forcenewrevision => 1 } );
 }
@@ -490,6 +574,10 @@ sub expandMacros {
       Foswiki::Func::expandCommonVariables( $text, $this->{topic}, $this->{web},
         $this->{meta} );
     $c->{can_render_meta} = $memory;
+
+    # remove some
+    $text =~ s/<\/?(literal|noautolink|nop)>//g;
+
     return $text;
 }
 
