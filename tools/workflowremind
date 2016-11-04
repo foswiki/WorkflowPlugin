@@ -1,0 +1,99 @@
+#! /usr/bin/env perl
+#
+# Foswiki - The Free and Open Source Wiki, http://foswiki.org/
+#
+# Copyright (C) 2016 Crawford Currie http://c-dot.co.uk
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details, published at
+# http://www.gnu.org/copyleft/gpl.html
+#
+# NOTE: THIS SCRIPT MUST BE RUN FROM THE bin DIRECTORY
+# This is so it can find setlib.cfg.
+#
+# As per the GPL, removal of this notice is prohibited.
+
+# Workflow stuck-at notification script. You must add the Foswiki bin
+# dir to the search path for this script, so it can find the rest of
+# Foswiki e.g.
+#
+# perl -I /usr/local/foswiki/bin /usr/local/foswiki/tools/workflowremind
+#
+# or you can run the script from the bin directory:
+#
+# perl ../tools/workflowremind
+
+use strict;
+
+use File::Spec;
+
+BEGIN {
+    my ( $volume, $binDir, $action ) = File::Spec->splitpath(__FILE__);
+    $binDir .= '/' if $binDir;
+    my $setlib = File::Spec->catpath( $volume, "$binDir../bin", 'setlib.cfg' );
+    @INC = ( '.', grep { $_ ne '.' } @INC ) unless $binDir;
+    require $setlib;
+}
+
+use Foswiki::Plugins::WorkflowPlugin::Mither ();
+
+my $usage = <<END;
+$0 [-topic <topics>] -workflow <wfn> (-state <spec>)*
+
+-topic is a wildcard specification of the webs/topics to process.
+\t-topic *.* will process all webs and topics
+\t-topic *.Doc* will process all topics starting with Doc in all webs
+\t-topic Documentation.Doc1234 will process a single topic
+-workflow specifies the workflow name (no web specifier)
+-state specifies a state to look for and the maximum number of days the topic is allowed to remain in that state before a reminder is sent. For example,
+\t-state FORFIRSTAPPROVAL=10 -state FORSECONDAPPROVAL=2
+will allow topics in FORFIRSTAPPROVAL to remain there for 10 days before complaining. Topics in FORSECONDAPPROVAL only get 2 days.
+
+The list of mail recipients is calculated in the context of the transitioned topic. If any fields used to build the list have changed since it was first transitioned have changed, that might result in a different list of people being notified than were initially told of the transition.
+END
+
+# Need list of states that need to be notified, and max time in that state
+my %options = (
+    topics => "*.*",    # all webs, all topics
+    states => {}        # no states, so nothing to do
+);
+
+# Called from the command line
+while ( scalar @ARGV ) {
+    my $arg = shift @ARGV;
+
+    if ( $arg eq '-topic' ) {
+        $options{topics} = shift @ARGV;
+    }
+    elsif ( $arg eq '-workflow' ) {
+        $options{workflow} = shift @ARGV;
+    }
+    elsif ( $arg eq '-state' ) {
+        my $spec = shift @ARGV;
+        my ( $state, $maxtime ) = split( "=", $spec, 2 );
+        $options{states}->{$state} = $maxtime;
+    }
+}
+
+unless ( $options{workflow} ) {
+    print STDERR "No workflow specified, nothing to do\n";
+    print STDERR $usage;
+    exit 1;
+}
+
+unless ( scalar keys %{ $options{states} } > 0 ) {
+    print STDERR "No states specified, nothing to do\n";
+    print STDERR $usage;
+    exit 1;
+}
+
+Foswiki::Plugins::WorkflowPlugin::Mither::mither(%options);
+
+1;

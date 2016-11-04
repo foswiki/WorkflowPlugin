@@ -104,9 +104,9 @@ sub getActions {
 sub setState {
     my ( $this, $state, $version ) = @_;
     return unless $this->isLatestRev();
-    $this->{state}->{name} = $state;
+    $this->{state}->{name}                 = $state;
     $this->{state}->{"LASTVERSION_$state"} = $version;
-    $this->{state}->{"LASTUSER_$state"} = Foswiki::Func::getWikiUserName();
+    $this->{state}->{"LASTUSER_$state"}    = Foswiki::Func::getWikiUserName();
     $this->{state}->{"LASTTIME_$state"} =
       Foswiki::Func::formatTime( time(), undef, 'servertime' );
     $this->{meta}->put( "WORKFLOW", $this->{state} );
@@ -374,10 +374,11 @@ sub changeState {
             }
             else {
                 if ( $who =~ /^LASTUSER_.+$/ ) {
+
                     #extract LASTUSER from workflow-attribute
                     $who = $this->{meta}->get( "WORKFLOW", $who );
                 }
-            
+
                 $who =~ s/^.*\.//;    # web name?
                 my @list = Foswiki::Func::wikinameToEmails($who);
                 if ( scalar(@list) ) {
@@ -426,9 +427,9 @@ sub changeState {
             my $tofield = join( ', ', @emails );
 
             Foswiki::Func::setPreferencesValue( 'EMAILTO', $tofield );
-            
-            #if this workflow has a custom email template defined via the notify-column
-            #use only this template
+
+     #if this workflow has a custom email template defined via the notify-column
+     #use only this template
             if ( scalar(@templates) ) {
                 foreach my $template (@templates) {
                     Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
@@ -440,7 +441,8 @@ sub changeState {
                             'Failed to send transition mails: ' . $errors );
                     }
                 }
-            } else {
+            }
+            else {
                 Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                     $this->getState() );
                 $text = $this->expandMacros($text);
@@ -450,8 +452,10 @@ sub changeState {
                         'Failed to send transition mails: ' . $errors );
                 }
             }
-        } elsif ( scalar(@templates) ) {
-            #if no emails are specified, try to send the custom templates anyways
+        }
+        elsif ( scalar(@templates) ) {
+
+           #if no emails are specified, try to send the custom templates anyways
             foreach my $template (@templates) {
                 Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
                     $this->getState() );

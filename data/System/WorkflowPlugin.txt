@@ -124,7 +124,10 @@ For example, the *Notify* column in the transition below will email =jim@example
 | PENDING | approve  |   APPROVED   |           | jim@example.com, template(EmailOne), template(EmailTwo) |
 </verbatim>
 
-*Note:* it's a good idea to avoid editing email notfication templates with a WYSIWYG editor, as they are somewhat fragile.  
+*Note:* it's a good idea to avoid editing email notification templates with a WYSIWYG editor, as they are somewhat fragile.  
+
+*Note:* you can also re-notify a transition when the topic has been stuck for
+a certain length of time in a state. This is done using the =tools/workflowremind= script. This script is normally run from a cron job, and can be run without parameters to see how it works.
 
 ---+++ Settings in your controlled document/topic 
 
@@ -190,7 +193,7 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 %META:FIELD{name="Version" title="Version" value="%$VERSION%"}%
 %META:FIELD{name="Release" title="Release" value="%$RELEASE%"}%
 %META:FIELD{name="Repository" attributes="" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
-%META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki./org/Support/WorkflowPlugin"}%
+%META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki.org/Support/WorkflowPlugin"}%
 %META:FIELD{name="Home" attributes="" title="Home" value="http://foswiki.org/Extensions/WorkflowPlugin"}%
 %META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1407507830" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
 %META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1407507830" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
