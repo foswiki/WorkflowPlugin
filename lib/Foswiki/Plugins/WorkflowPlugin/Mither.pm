@@ -35,12 +35,13 @@ sub mither {
     my @allwebs = Foswiki::Func::getListOfWebs();
     my @topics;
     foreach my $topicre ( split( /,+/, $options{topics} ) ) {
-        $topicre =~ s/\./\\./g;
+        $topicre =~ s/([.\/])/\\$1/g;
         $topicre =~ s/\*/.*/g;
         $topicre =~ s/\?/./g;
+        $topicre = qr/^$topicre$/;
         foreach my $web (@allwebs) {
             foreach my $topic ( Foswiki::Func::getTopicList($web) ) {
-                if ( "$web.$topic" =~ /^$topicre$/ ) {
+                if ( "$web.$topic" =~ /$topicre/ ) {
                     push( @topics, { web => $web, topic => $topic } );
                 }
             }
