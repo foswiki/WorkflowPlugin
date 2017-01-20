@@ -62,7 +62,7 @@ sub new {
 
     # Yet another table parser
     # State table:
-    # | *State*       | *Allow Edit* | *Message* |
+    # | *State*  | *Allow View* | *Allow Edit* | *Message* |
     # Transition table:
     # | *State* | *Action* | *Next state* | *Allowed* |
     foreach my $line ( split( /\n/, $text ) ) {
@@ -79,6 +79,7 @@ sub new {
         }
         elsif (
             $line =~ s/^\s*\|([\s*]*State[\s*]*\|
+			      (?:[\s*]*Allow\s*View[\s*]*\|)?
                               [\s*]*Allow\s*Edit[\s*]*\|.*)\|$/$1/ix
           )
         {
@@ -201,7 +202,19 @@ sub allowEdit {
     my $state = $topic->getState();
     return 0 unless $this->{states}->{$state};
     my $allowed =
-      $topic->expandMacros( $this->{states}->{$state}->{allowedit} );
+      $topic->expandMacros( $this->{states}->{$state}->{allowedit} || '' );
+    return _isAllowed( $allowed, $topic );
+}
+
+# Determine if the current user is allowed to view a topic that is in
+# the given state.
+sub allowView {
+    my ( $this, $topic ) = @_;
+
+    my $state = $topic->getState();
+    return 0 unless $this->{states}->{$state};
+    my $allowed =
+      $topic->expandMacros( $this->{states}->{$state}->{allowview} || '' );
     return _isAllowed( $allowed, $topic );
 }
 
