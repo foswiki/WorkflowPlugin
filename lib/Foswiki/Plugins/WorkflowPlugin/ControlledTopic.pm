@@ -376,7 +376,7 @@ sub changeState {
                 if ( $who =~ /^LASTUSER_.+$/ ) {
 
                     #extract LASTUSER from workflow-attribute
-                    $who = $this->getState( $who );
+                    $who = $this->getState($who);
                 }
 
                 $who =~ s/^.*\.//;    # web name?
