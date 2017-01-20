@@ -14,7 +14,7 @@ For example,
    * In a defect tracking data base, defects typically transition through a series of states, from submission to resolution, with different actions available depending on the state of the defect.
    * In a journal database, papers must be reviewed and approved by several experts in the field before being allowed to be published.
 
-<nop>WorkflowPlugin lets you associate a state with a topic and then control what other states that the topic can move to. You can define a set of _states_ for controlled topics (e.g. "under revision", "waiting for approval", "approved") and _transitions_ (e.g. "revise", "approve") between these states. Furthermore, you can define which users/groups are permitted to perform specific transistions.
+<nop>WorkflowPlugin lets you associate a state with a topic and then control what other states that the topic can move to. You can define a set of _states_ for controlled topics (e.g. "under revision", "waiting for approval", "approved") and _transitions_ (e.g. "revise", "approve") between these states. Furthermore, you can define which users/groups are permitted to perform specific transitions, and generate mail notifications whenever a topic state changes. You can also generate reminders when a topic has been stuck-at a state for longer than a certain time.
 
 A workflow can be associated with a single topic, or with an entire web. 
 
@@ -172,6 +172,11 @@ A common requirement is to report on the status of topics that are in different 
 <verbatim>
 %SEARCH{"META:WORKFLOW.name='APPROVED'" type="query"}%
 </verbatim>
+
+---++ Stuck-At Reminders
+You may want to be able to issue a notification is a topic is stuck in a state for longer than a given time, to keep the workflow moving. For this the plugin provides the =tools/workflowremind= perl script, which is run on the server - either manually, or using a =cron= job. To find out how this is used, change to the =tools= directory on the server and =perl workflowremind= with no parameters.
+
+The mail sent by this script uses a special template, =templates/mailworkflowremind.tmpl=. You can override this by providing a template topic called =WorkflowRemindTemplate= in the web where the transitioned topic resides.
 
 ---++ History and Acknowledgements
 

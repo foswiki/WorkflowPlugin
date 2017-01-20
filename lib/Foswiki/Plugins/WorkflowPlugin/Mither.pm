@@ -27,7 +27,8 @@ my %workflows;
 sub mither {
     my %options = @_;
 
-    my $session = new Foswiki();
+    # Always run as admin
+    my $session = new Foswiki( $Foswiki::cfg{AdminUserLogin} );
 
     # Assign SESSION so that Func methods work
     $Foswiki::Plugins::SESSION = $session;
@@ -189,7 +190,8 @@ sub renotifyTransition {
         my $currentweb      = undef;
         my $currenttopic    = undef;
 
-        my $text = Foswiki::Func::loadTemplate('mailworkflowmither');
+        my $text = Foswiki::Func::loadTemplate('WorkflowRemindMail')
+          || loadTemplate('mailworkflowmither');
 
         my $tofield = join( ', ', @emails );
 
