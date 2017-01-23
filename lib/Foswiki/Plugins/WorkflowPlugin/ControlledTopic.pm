@@ -89,7 +89,7 @@ sub getState {
     my $this = shift;
     my $key  = shift;
 
-    $key =~ s/ +/_/g;
+    $key =~ s/ +/_/g if defined $key;
 
     return defined $key
       ? $this->{state}->{$key}

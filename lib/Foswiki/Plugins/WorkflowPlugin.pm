@@ -19,8 +19,8 @@ use Foswiki::Plugins::WorkflowPlugin::ControlledTopic ();
 use Foswiki::OopsException                            ();
 use Foswiki::Sandbox                                  ();
 
-our $VERSION = '1.14';
-our $RELEASE = '11 March 2015';
+our $VERSION = '1.15';
+our $RELEASE = '22 Jan 2017';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
