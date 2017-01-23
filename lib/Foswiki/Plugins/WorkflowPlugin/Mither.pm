@@ -191,7 +191,7 @@ sub renotifyTransition {
         my $currenttopic    = undef;
 
         my $text = Foswiki::Func::loadTemplate('WorkflowRemindMail')
-          || loadTemplate('mailworkflowmither');
+          || Foswiki::Func::loadTemplate('mailworkflowmither');
 
         my $tofield = join( ', ', @emails );
 
