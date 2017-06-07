@@ -218,36 +218,36 @@ sub _isModifiable {
     return $this->{isEditable} if defined $this->{isEditable};
 
     # Does the workflow permit editing?
-    if ( $this->{isEditable} ) {
-        $this->{isEditable} = $this->{workflow}->allowView($this);
+    $this->{isEditable} = $this->{workflow}->allowView($this);
 
+    unless ( $this->{isEditable} ) {
         Foswiki::Func::writeDebug "Modify denied by allowView\n"
-          if TRACE && !$this->{isEditable};
+          if TRACE;
+        return 0;
+    }
 
-        if ( $this->{isEditable} ) {
-            $this->{isEditable} = $this->{workflow}->allowEdit($this);
+    $this->{isEditable} = $this->{workflow}->allowEdit($this);
 
-            Foswiki::Func::writeDebug "Modify denied by allowEdit\n"
-              if TRACE && !$this->{isEditable};
-        }
+    unless ( $this->{isEditable} ) {
+        Foswiki::Func::writeDebug "Modify denied by allowEdit\n"
+          if TRACE;
+        return 0;
     }
 
     # Does Foswiki permit editing?
-    if ( $this->{isEditable} ) {
+    # DO NOT PASS $this->{meta}, because of Item11461
+    $this->{isEditable} =
+      Foswiki::Func::checkAccessPermission( 'CHANGE',
+        $Foswiki::Plugins::SESSION->{user},
+        $this->{text}, $this->{topic}, $this->{web} ) // 0;
 
-        # DO NOT PASS $this->{meta}, because of Item11461
-        $this->{isEditable} =
-          Foswiki::Func::checkAccessPermission( 'CHANGE',
-            $Foswiki::Plugins::SESSION->{user},
-            $this->{text}, $this->{topic}, $this->{web} )
-          if $this->{isEditable};
-
+    unless ( $this->{isEditable} ) {
         Foswiki::Func::writeDebug "Modify denied by checkAccessPermission\n"
-          if TRACE && !$this->{isEditable};
+          if TRACE;
+        return 0;
     }
-    $this->{isEditable} ||= 0;    # ensure defined
 
-    return $this->{isEditable};
+    return 1;
 }
 
 sub _isViewable {
@@ -261,24 +261,27 @@ sub _isViewable {
     # Does the workflow permit viewing?
     $this->{isViewable} = $this->{workflow}->allowView($this);
 
-    Foswiki::Func::writeDebug "View denied by allowView\n"
-      if TRACE && !$this->{isEditable};
+    unless ( $this->{isViewable} ) {
+        Foswiki::Func::writeDebug "View denied by allowView\n"
+          if TRACE;
+        return 0;
+    }
 
     # Does Foswiki permit editing?
-    if ( $this->{isViewable} ) {
 
-        # DO NOT PASS $this->{meta}, because of Item11461
-        $this->{isViewable} =
-          Foswiki::Func::checkAccessPermission( 'VIEW',
-            $Foswiki::Plugins::SESSION->{user},
-            $this->{text}, $this->{topic}, $this->{web} );
+    # DO NOT PASS $this->{meta}, because of Item11461
+    $this->{isViewable} =
+      Foswiki::Func::checkAccessPermission( 'VIEW',
+        $Foswiki::Plugins::SESSION->{user},
+        $this->{text}, $this->{topic}, $this->{web} ) // 0;
 
+    unless ( $this->{isViewable} ) {
         Foswiki::Func::writeDebug "View denied by checkAccessPermission\n"
-          if TRACE && !$this->{isViewable};
+          if TRACE;
+        return 0;
     }
-    $this->{isViewable} ||= 0;    # ensure defined
 
-    return $this->{isViewable};
+    return 1;
 }
 
 # Return tue if this topic is viewable
