@@ -903,42 +903,47 @@ sub afterSaveHandler {
     my $workflow = $controlledTopic->{workflow};
     my $state    = $controlledTopic->getState();
 
-    # set/unset edit rights
-    my $allowEdit = $workflow->{states}->{$state}->{allowedit};
-    $allowEdit = $controlledTopic->expandMacros($allowEdit);
+    # Item14430 - make ACL overwriting optional
+    if ( $Foswiki::cfg{Plugins}{WorkflowPlugin}{UpdateFoswikiACLs} ) {
 
-    if ($allowEdit) {
-        $controlledTopic->{meta}->putKeyed(
-            'PREFERENCE',
-            {
-                name  => 'ALLOWTOPICCHANGE',
-                title => 'ALLOWTOPICCHANGE',
-                value => $allowEdit,
-                type  => 'Set'
-            }
-        );
-    }
-    else {
-        $controlledTopic->{meta}->remove( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
-    }
+        # set/unset edit rights
+        my $allowEdit = $workflow->{states}->{$state}->{allowedit};
+        $allowEdit = $controlledTopic->expandMacros($allowEdit);
 
-    # set/unset view rights
-    my $allowView = $workflow->{states}->{$state}->{allowview} || '';
-    $allowView = $controlledTopic->expandMacros($allowView);
+        if ($allowEdit) {
+            $controlledTopic->{meta}->putKeyed(
+                'PREFERENCE',
+                {
+                    name  => 'ALLOWTOPICCHANGE',
+                    title => 'ALLOWTOPICCHANGE',
+                    value => $allowEdit,
+                    type  => 'Set'
+                }
+            );
+        }
+        else {
+            $controlledTopic->{meta}
+              ->remove( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
+        }
 
-    if ($allowView) {
-        $controlledTopic->{meta}->putKeyed(
-            'PREFERENCE',
-            {
-                name  => 'ALLOWTOPICVIEW',
-                title => 'ALLOWTOPICVIEW',
-                value => $allowView,
-                type  => 'Set'
-            }
-        );
-    }
-    else {
-        $controlledTopic->{meta}->remove( 'PREFERENCE', 'ALLOWTOPICVIEW' );
+        # set/unset view rights
+        my $allowView = $workflow->{states}->{$state}->{allowview} || '';
+        $allowView = $controlledTopic->expandMacros($allowView);
+
+        if ($allowView) {
+            $controlledTopic->{meta}->putKeyed(
+                'PREFERENCE',
+                {
+                    name  => 'ALLOWTOPICVIEW',
+                    title => 'ALLOWTOPICVIEW',
+                    value => $allowView,
+                    type  => 'Set'
+                }
+            );
+        }
+        else {
+            $controlledTopic->{meta}->remove( 'PREFERENCE', 'ALLOWTOPICVIEW' );
+        }
     }
 
     my $key = $state;
