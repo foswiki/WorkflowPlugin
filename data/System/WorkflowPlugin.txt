@@ -7,124 +7,166 @@
 <div style="float:right">
 %ATTACHURL%/Flow.gif
 </div>
-Foswiki provides a flexible system of Access Control Lists that can be used to control who can modify a topic. Sometimes this isn't quite enough, and the access control depends on the state that a topic is in.
+Foswiki provides a flexible system of Access Control Lists that can be
+used to control who can modify a topic. Sometimes this isn't quite
+enough, and the access control depends on the state that a topic is
+in.
 
 For example,
    * When writing documents compliant with ISO 9000 (e.g. a quality manual), it is essential that documents are approved by quality control
    * In a defect tracking data base, defects typically transition through a series of states, from submission to resolution, with different actions available depending on the state of the defect.
    * In a journal database, papers must be reviewed and approved by several experts in the field before being allowed to be published.
 
-<nop>WorkflowPlugin lets you associate a state with a topic and then control what other states that the topic can move to. You can define a set of _states_ for controlled topics (e.g. "under revision", "waiting for approval", "approved") and _transitions_ (e.g. "revise", "approve") between these states. Furthermore, you can define which users/groups are permitted to perform specific transitions, and generate mail notifications whenever a topic state changes. You can also generate reminders when a topic has been stuck-at a state for longer than a certain time.
-
-A workflow can be associated with a single topic, or with an entire web. 
-
-<div class="foswikiHelp">
-*Upgrade note* If you are upgrading from a version before 10 Nov 2008 please note that the format of the WORKFLOWHISTORYFORMAT preference has changed slightly, in that:
-   1 enclosing double quotes are no longer removed from the value. This changes has been to bring this preference definition into line with other preference definitions.
-   1 =$n= is interpreted as \n, not &lt;br&gt;, in line with the standard [[%SYSTEMWEB%.FormatTokens][format tokens]]. If you want a &lt;br&gt; in the format string, then enter it as &lt;br&gt; or $percntBR$percnt.
-</div>
+<nop>WorkflowPlugin lets you associate a state with a topic and then
+control what other states that the topic can move to. You can define a
+set of _states_ for controlled topics (e.g. "under revision", "waiting
+for approval", "approved") and _transitions_ (e.g. "revise",
+"approve") between these states. Furthermore, you can define which
+users/groups are permitted to perform specific transitions, and
+generate mail notifications whenever a topic state changes. You can
+also generate reminders when a topic has been stuck-at a state for
+longer than a certain time.
 
 ---++ Usage
 
-A topic is under document control if the preference variable =WORKFLOW= is set
-in the topic page. =WORKFLOW= must be set to the wiki name of a topic that describes your specific workflow (the _workflow description topic_).
+A topic is under document control if the preference variable
+=WORKFLOW= is set in the topic. =WORKFLOW= must be set to the wiki
+name of a topic that describes your specific workflow (the _workflow
+description topic_).
 
-Note: you can hide the setting in a normal view using HTML comments, or better, you can put these settings into the local topic settings, accessible from the "more" screen.
+%I% you can hide the setting in a normal view using HTML comments, or
+ better, you can put these settings into the local topic settings,
+ accessible from the "more..." screen. Or you can put the setting into
+ a formfield - see #FormBasedWorkflows below.
 
 ---+++ Settings in the workflow description topic 
 
-The workflow description topic must contain one state table and one transition table. The state table describes the possible states a document may be in (nodes in the flow diagram above), and the transition table describes how documents move between states (arcs in the flow diagram).
+The workflow description topic must contain one state table and one
+transition table. The state table describes the possible states a
+document may be in (nodes in the flow diagram above), and the
+transition table describes how documents move between states (arcs in
+the flow diagram).
 
-This is easiest illustrated using an example (available as Sandbox.DocumentApprovalWorkflow if the plugin is installed).
+This is easiest illustrated using an example (available as
+Sandbox.DocumentApprovalWorkflow if the plugin is installed).
 
-The state table is a table with three columns:
+Each row of the state table defines a state that a topic can be in:
 
 <verbatim>
-| *State*       | *Allow Edit* | *Message* |
-| UNDERREVISION | QualityGroup | This document is being revised. |
-| APPROVED      | nobody       | This document has been approved for release. |
-| WAITINGFORQM  | nobody       | This document is waiting for approval by the Quality Manager. |
-| WAITINGFORCTO | nobody       | This document is waiting for approval by the CTO.|
+| *State*       | *Message* |
+| UNDERREVISION | This document is being revised. |
+| WAITINGFORQM  | This document is waiting for approval by the Quality Manager. |
+| WAITINGFORCTO | This document is waiting for approval by the CTO.|
+| APPROVED      | This document has been approved for release. |
 </verbatim>
 
 Each row in the table defines a state where:
-	* the *State* column specifies a name for the state, 
-	* the *Allow Edit* column specifies who is permitted to edit the topic when it is in the state, and 
-	* the *Message* column defines a message which can be displayed on the document page when the document is in this state.
+   * the *State* column specifies a name for the state, 
+   * the *Message* column defines a message which can be displayed on the document page when the document is in this state.
+   * optional *Allow* columns specify who is granted access to the topic when it moves to that state (see #AccessControl below)
 
-In the example we have defined four states. Members of the
-!QualityGroup are permitted modify documents can make changes to the document
-in UNDERREVISION state. In all other states, nobody is allowed to edit the
-controlled document.
-
-The first state in the table is the initial/default state.
+The *State* column must be first, but the other columns can appear in
+any order.  The first state in the table is the initial/default state.
 
 %X% The state table must be defined *before* the transition table!
 
 The transition table consists of four columns, as in this example:
 <verbatim>
-| *State*       | *Action* | *Next State*  | *Allowed*                        |
-| APPROVED      | revise   | UNDERREVISION | QualityGroup                     |
-| UNDERREVISION | complete | WAITINGFORQM  | QualityGroup                     |
-| WAITINGFORQM  | approve  | WAITINGFORCTO | QualityManager                   |
-| WAITINGFORQM  | reject   | UNDERREVISION | QualityManager,QualityGroup      |
-| WAITINGFORCTO | approve  | APPROVED      | TechnicalDirector                |
-| WAITINGFORCTO | reject   | UNDERREVISION | TechnicalDirector,QualityManager |
+| *State*       | *Action* | *Next State*  | *Form* | *Allowed*                        |
+| UNDERREVISION | complete | WAITINGFORQM  |        | QualityGroup                     |
+| WAITINGFORQM  | approve  | WAITINGFORCTO | QaForm | QualityManager                   |
+| WAITINGFORQM  | reject   | UNDERREVISION | QaForm | QualityManager,QualityGroup      |
+| WAITINGFORCTO | approve  | APPROVED      | QaForm | TechnicalDirector                |
+| WAITINGFORCTO | reject   | UNDERREVISION | QaForm | TechnicalDirector,QualityManager |
+| APPROVED      | revise   | UNDERREVISION | PuForm | QualityGroup
+       |
 </verbatim>
 
 Each row in this table defines a transition from one state to another state:
-	* the *State* column contains the name of a state from the state table, 
-	* the *Action* column describes a possible action when the topic is in
-      this state,
-	* the *Next State* column defines the new state of the document after
-      the specified action has been performed,
-	* the *Allowed* column specifies who is allowed to perform the
-      corresponding action,
-	* an _optional_ *Form* column defines a form that is attached to
-      the topic in this state.
-	* an _optional_ *Notify* column specifies who should be notified when this transition fires.
+   * the *State* column contains the name of a state from the state table, 
+   * the *Action* column describes a possible action when the topic is in
+     this state,
+   * the *Next State* column defines the new state of the document after
+     the specified action has been performed,
+   * the *Allowed* column specifies who is allowed to perform the
+     corresponding action,
+   * an _optional_ *Form* column defines a form that is attached to
+     the topic in this state.
+   * an _optional_ *Notify* column specifies who should be notified when
+     this transition fires.
 
-In our example, anyone is allowed to revise the document when it is in =UNDERREVISION= state. After finishing the revision, the document can be transitioned to the =WAITINGFORQM= state by any member of the !QualityGroup. It must then be approved by the !QualityManager, and after that by the !TechnicalDirector. Even though they can't edit the document themselves (see state table above), they _can_ reject the revision and put the document back into the =UNDERREVISION= state. The !TechnicalDirector can transition the document to =APPROVED= state where it rests until a member of the !QualityGroup puts it under revision again.
+In our example, anyone is allowed to revise the document when it is in
+=UNDERREVISION= state. After finishing the revision, the document can
+be transitioned to the =WAITINGFORQM= state by any member of the
+!QualityGroup. It must then be approved by the !QualityManager, and
+after that by the !TechnicalDirector. Even though they can't edit the
+document themselves (see state table above), they _can_ reject the
+revision and put the document back into the =UNDERREVISION= state. The
+!TechnicalDirector can transition the document to =APPROVED= state
+where it rests until a member of the !QualityGroup puts it under
+revision again.
 
-If a form name is given in the *Form* column, this form will be attached to the topic, and the topic will put in edit mode to allow information to be provided in the form _when that state transition happens_. In the example above, a form of type Approved<nop>Form will be attached to the topic when the CTO transitions the topic into =APPROVED= state.
+If a form name is given in the *Form* column, this form will be
+attached to the topic, and the topic will put in edit mode to allow
+information to be provided in the form _when that state transition happens_.
+
+In the example above, a form of type Approved<nop>Form will
+be attached to the topic when the CTO transitions the topic into
+=APPROVED= state.
    * if there is already a form of a different type attached to the topic, then any fields that have the same name in the _new_ form will be preserved.
    * If no form is given, the existing form (if any) is left in place.
 A typical usage of the form would be to collect additional information as the topic walks through the work flow, or to make information in the form unchangeable (by setting it to a =label= field) once a given state is reached.
 
-If a *Notify* column is given, that column can contain a comma-separated list of notification targets to be informed when the transition is fired. You can specify values in any combination of the following formats:
-| *Format* | *Example* | *Notes* |
-| Email addresses | webmaster@example.com | |
-| User wiki names | Main.WikiGuest | |
-| Wiki group names | Main.AdminGroup | |
-| Workflow Attribute names | LASTUSER_APPROVED | LASTUSER_{State} |
-| Email templates | =template(!Web.MyTopic)= | Must be wrapped in parentheses and proceeded by the word =template=, all lowercase, no spaces. |
+If a *Notify* column is given, that column can contain a
+comma-separated list of notification targets to be informed when the
+transition is fired.  See #TransitionNotification below for more information.
 
-When a transition is fired, any email addresses provided in the *Notify* column (or resolved from wiki/group names) will be notified, with a message formatted according to the default email template provided with the plugin.  You can override this template by setting the =WORKFLOWDEFAULTEMAILTEMPLATE= preference in your workflow description topic.  Set that to a topic that contains a valid email notification template (see example below), and all email addresses provided will receive messages formatted according to that template:
+---++ Transition Notification
+If a *Notify* column is given in the transition table, then that column
+should contain a comma-separated list of notification targets to be emailed
+when the transition is fired.
 
+You can specify notification targets in any combination of the
+following formats:
+| *Format* | *Example* |
+| Email addresses | =webmaster@example.com= |
+| User wiki names | =%USERSWEB%.WikiGuest= |
+| Wiki group names | =%USERSWEB%.AdminGroup= |
+| Last user-in-state | =LASTUSER_APPROVED= |
+
+Notify column entries can contain macros, which are expanded in the
+context of the topic *after* the transition has happened.
+
+Last user-in-state expands to the name of the user who last transitioned
+to the given state.
+
+---+++ Notification Email Format
+
+By default, notification emails are formatted according to the
+=mailworkflowtransition= [[#SkinTemplates][skin template]]. All
+standard Foswiki macros in the templates are expanded, plus the
+following additional macros:
+| =EMAILTO= | Comma-separated list of email addressess |
+| =TRANSITION= | Name of the transition |
+| =TARGET_STATE= | State being transitioned to |
+
+For convenience, this default template can be overridden using the the
+=WORKFLOWDEFAULTEMAILTEMPLATE= preference in your workflow description
+topic, which should be set to the name of a topic. If this is not set,
+default [[SkinTemplates][skin template]] rules are followed.
+
+In addition you can define custom email templates in the *Notify*
+column, using the syntax =template(!Web.MyTopic)=. This allows you to
+do more sophisticated email notification, for example you could write
+a different custom email template for each transition.
+
+For example, the *Notify* column in the transition table below will email =jim@example.com= using the default template, and expand both the =EmailOne= and =EmailTwo= templates, sending the results to whatever email addresses are defined on their respective =To=, =Cc=, or =Bcc= lines:
 <verbatim>
-From: %WIKIWEBMASTERNAME% <%WIKIWEBMASTER%>
-To: %EMAILTO%
-Cc:
-Subject: %WIKITOOLNAME%.%WEB%.%TOPIC% - transitioned to %TARGET_STATE%
-Auto-Submitted: auto-generated
-MIME-Version: 1.0
-Content-Type: text/plain
-
-%WIKINAME% has moved the topic %WEB%.%TOPIC% to the %TARGET_STATE% state.  You can view the document here:
-%SCRIPTURL{"view"}%/%WEB%/%TOPIC%
+| *State* | .... |  *Notify*                                               |
+| PENDING | .... | jim@example.com, template(EmailOne), template(EmailTwo) |
 </verbatim>
-
-Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body beginning below the first blank line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how !WorkflowPlugin expands macros.
-
-For more sophisticated email notification, you can also write one or more custom email templates for each transition. Custom notification templates can either provide valid headers that define their recipients or access the =EMAILTO= macro, so other email addresses provided will be sent exclusively through custom templates.
-
-For example, the *Notify* column in the transition below will email =jim@example.com= using the default template, and execute both the =EmailOne= and =EmailTwo= templates, sending the results to whatever email addresses are defined on their respective =To=, =Cc=, or =Bcc= lines:
-<verbatim>
-| *State* | *Action* | *Next State* | *Allowed* |  *Notify*                                               |
-| PENDING | approve  |   APPROVED   |           | jim@example.com, template(EmailOne), template(EmailTwo) |
-</verbatim>
-
-*Note:* it's a good idea to avoid editing email notification templates with a WYSIWYG editor, as they are somewhat fragile.  
+Custom templates have the additional macro:
+| =TEMPLATE= | web.topic name of the template |
 
 *Note:* you can also re-notify a transition when the topic has been stuck for
 a certain length of time in a state. This is done using the =tools/workflowremind= script. This script is normally run from a cron job, and can be run without parameters to see how it works.
@@ -141,16 +183,15 @@ Similarly, you can use =%<nop>WORKFLOWATTACHTOPIC%= in your skin templates to cr
 
 ---+++ Content-sensitive workflows
 *Advanced* Flows can be made sensitive to the content of the controlled
-topics. The 'Allow Edit' column in the state table, and the 'Next State'
-and 'Allowed' columns in the transition table, support the use of macros
-which are expanded
-when the topic is viewed. For example, you can use the =[[VarMETA][META]]=
-macro to pick up values for these fields from the form attached to the
-viewed topic:
+topics. The *Allow* columns in the state table, and the *Next State*
+and *Allowed* columns in the transition table, support the use of macros
+which are expanded when the topic is viewed. For example, you can use the
+=[[VarMETA][META]]= macro to pick up values for these fields from the form
+attached to the viewed topic:
 
 *State table*
 <verbatim>
-| *State*             | *Allow Edit*                         | *Message* |
+| *State*             | *Allow CHANGE*                         | *Message* |
 | WAITINGFORAPPROVAL  | %META{"formfield" name="MayModify"}% | This document is waiting for approval |
 </verbatim>
 *Transition Table*
@@ -173,16 +214,129 @@ A common requirement is to report on the status of topics that are in different 
 %SEARCH{"META:WORKFLOW.name='APPROVED'" type="query"}%
 </verbatim>
 
+---++ Access Control
+The plugin uses extended Foswiki permissions to manage access to topics.
+
+In the state table, you can have any number of "Allow" columns, for example
+"Allow CHANGE" or "Allow VIEW". These columns dictate the Foswiki permissions
+that are applied when a topic is transitioned to that state by the plugin. For
+example, if the state table contains:
+<verbatim>
+| *State*        | *Allow CHANGE*   | *Allow VIEW* |
+| UNDERREVISION  | EngineeringGroup |              |
+</verbatim>
+When a topic is transitioned to this state, all other topic-level permissions
+will automatically be removed, and the permissions:
+   * Set ALLOWTOPICCHANGE = EngineeringGroup
+   * Set ALLOWTOPICVIEW = *
+will be added to the topic.
+
+Empty 'Allow' columns in the state table are taken as meaning no restriction.
+The special entry =nobody= can be used to restrict access for everyone (except
+admins).
+
+The ability to change the state of a topic is controlled by the *Allowed*
+column of the state table. If you leave the *Allowed* column empty,
+then anyone will be able to perform that transition.
+
+The *Allow* columns in the state table and the *Allowed* column in the
+state table support the use of Foswiki macros. The special entry
+=nobody= can be used to restrict access for everyone (except
+admins).
+
+%X% For historical reasons, *Allow Edit* is mapped to *Allow CHANGE*.
+
+%X% Only ALLOWTOPIC access controls in metadata preference settings
+are managed; access controls explicit in the text (set by * Set) are
+not managed, nor are =DENYTOPIC= preferences in metadata. Access
+controls set in these ways may prevent the plugin from working
+correctly.
+
 ---++ Stuck-At Reminders
 You may want to be able to issue a notification is a topic is stuck in a state for longer than a given time, to keep the workflow moving. For this the plugin provides the =tools/workflowremind= perl script, which is run on the server - either manually, or using a =cron= job. To find out how this is used, change to the =tools= directory on the server and =perl workflowremind= with no parameters.
 
 The mail sent by this script uses a special template, =templates/mailworkflowremind.tmpl=. You can override this by providing a template topic called =WorkflowRemindTemplate= in the web where the transitioned topic resides.
 
+---++ Form Based Workflows
+Normally the workflow for a topic is defined in a Foswiki preference setting. You can also use a form field for this.
+
+If there is no WORKFLOW preference setting, then the form field "Workflow"
+is used for the workflow name. Note that because the form can change when
+a transition happens, the so can the workflow. Using this technique,
+it is possible for a topic to switch between workflows as the result of a
+transition.
+
+#SkinTemplates
+---++ Controlling Appearance
+
+The appearance of all buttons and special screens is controlled through the use of [[SkinTemplates][skin templates]]:
+   * =workflowstrings.tmpl= - contains translateable definitions for all error messages and inline controls,
+   * =mailworkflowtransition.tmpl= is the template for the email sent for a transition
+  * =mailworkflowmither.tmpl= is the template used when re-mailing a transition notification,
+  * =workflowedit.tmpl= is the template used for editing during a transition (i.e. when a new form is attached)
+
+For simple customisation of the default templates, the
+[[PreferenceSettings][preference]]
+=WORKFLOWTRANSITIONCSSCLASS= can be set to the names of one or more CSS
+classes that are used to style buttons, such as the transition and fork buttons.
+
+More complex customisations can be achieved through use of skins - see
+SkinTemplates for more information.
+
+---++ Metadata
+The plugin uses custom meta-data to contol and track workflows. Most users
+will never need to know about this; the following is for experts who want
+to understand the format of that metadata.
+
+---+++ =WORKFLOW= - unique
+   * =name= - current state of this topic
+   * =LAST(TIME|USER|VERSION|COMMENT)= - deprecated, replaced with =WORKFLOWHISTORY=
+
+---+++ =WORKFLOWHISTORY= - may be many
+All workflow history entries have the following fields:
+   * =name= - revision identifier
+   * =author= - who did the transition/fork
+   * =date= - time the transition/fork happened (epoch secs)
+
+State transitions are recorded as follows:
+   * =state= - state transitioned into
+   * =comment= - comment accompanying the transition
+
+Forks are recorded in both the forked topic, and th topic created by the fork.
+
+In the topic that was forked from,
+   * =forkto= - comma-separated list of web.topic generted by the fork
+
+In each topic that is forked to,
+   * =forkfrom= - web.topic that the topic is forked from
+   * =rev= - the revision of the =forkfrom= topic after the fork was done
+
+---++ Debugging Workflows
+Developing complex workflows is quite straightforward, though from time-to-time
+you may require some additional debugging support. In this case you can enable
+the =WORKFLOWDEBUG= preference, either in the workflow description topic or in
+an individual controlled topic, to get extra information about the macros
+being expanded when a controlled topic is viewed.
+
+Enabling debug also enables messages about events to be output
+to the Foswiki debug log (requires administrator access).
+
 ---++ History and Acknowledgements
 
-This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and its first version (then called !ApprovalPlugin) was written by Thomas Hartkens, albeit it was focused on document approval and control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged the functionality of the [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this plugin.
+This plugin was motivated by [[Foswiki:Main.ThomasWeigert][Thomas
+Weigert]]'s [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] and
+its first version (then called !ApprovalPlugin) was written by Thomas
+Hartkens, albeit it was focused on document approval and
+control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged
+the functionality of the
+[[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this
+plugin. Finally the plugin was almost completely rewritten by
+[[Foswiki:Main.CrawfordCurrie][Crawford Currie]] for maintainability.
 
 ---++ Installation Instructions
+
+This version of the plugin is intended for use with Foswiki 2.0 and later.
+If you are running an older Foswiki, do not install it!
 
 %$INSTALL_INSTRUCTIONS%
 
@@ -192,6 +346,11 @@ Look at the examples in the !Sandbox web.
 
 __Note:__ For strict access control, the plugin should know who is looking at the controlled document/topic at all times.  To enable this, you may want to set up the wiki in such way that users have to log-in *even if they just display a topic*.
 
+<div class="foswikiHelp">
+*Upgrade note* If you are upgrading from a version before 10 Nov 2008 please note that the format of the WORKFLOWHISTORYFORMAT preference has changed slightly, in that:
+   1 enclosing double quotes are no longer removed from the value. This changes has been to bring this preference definition into line with other preference definitions.
+   1 =$n= is interpreted as \n, not &lt;br&gt;, in line with the standard [[%SYSTEMWEB%.FormatTokens][format tokens]]. If you want a &lt;br&gt; in the format string, then enter it as &lt;br&gt; or $percntBR$percnt.
+</div>
 
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie"}%

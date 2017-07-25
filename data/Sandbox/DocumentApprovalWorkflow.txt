@@ -2,7 +2,6 @@
    * Set WORKFLOWNOTICE = This topic is under document control. Last approval on %WORKFLOWLASTTIME_APPROVED%: %WORKFLOWLASTVERSION_APPROVED%
    * Set WORKFLOWBUTTON =  <table border="0" cellspacing="0" cellpadding="0"> <tr><td>You are permitted to change the status of this document:</td><td>%WORKFLOWTRANSITION%</TD></tr></table>
    * Set this to 1 to enable debugging about the workflow
-   * Set WORKFLOWDEBUG = 1
 
 Existing Controlled documents:
 %SEARCH{"Set WORKFLOW = DocumentApprovalWorkflow" excludetopic="%TOPIC%" nonoise="on" format="|$topic|"}%
@@ -33,6 +32,8 @@ Workflow history: %<nop>WORKFLOWHISTORY%
 | APPROVED       | revise   | UNDERREVISION |           | ApprovedForm  |
 | UNDERREVISION  | ready for approval | WAITINGFORQM  | | InProcessForm |
 | WAITINGFORQM   | approve  | WAITINGFORCTO |           |               |
-| WAITINGFORQM   | reject   | UNDERREVISION |           |               |
+| WAITINGFORQM   | reject   | UNDERREVISION | nobody    |               |
 | WAITINGFORCTO  | approve  | APPROVED      |           | ApprovedForm  |
 | WAITINGFORCTO  | reject   | UNDERREVISION |           |               |
+
+%META:PREFERENCE{name="WORKFLOWDEBUG" value="1"}%

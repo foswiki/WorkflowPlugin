@@ -1,0 +1,100 @@
+#{
+Messages and Control templates for WorkflowPlugin. Comments are used in
+multiline definitions to absorb whitespace so they can be used in Foswiki
+tables.
+}#
+
+%TMPL:DEF{workflow:debug}%<!--%PARAM1%-->%TMPL:END%
+%TMPL:DEF{workflow:notransitions}%%MAKETEXT{"No available transitions in state '[_1]'" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:forkedto}%%MAKETEXT{"Forked to [_1] by [_2] at [_3]" args="%PARAM1%,%PARAM2%,%PARAM3%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:forkedfrom}%%MAKETEXT{"Forked from [[[_1]]] by [_2] at [_3]" args="%PARAM1%,%PARAM2%,%PARAM3%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:forkalreadyexists}%%MAKETEXT{"'[_1]' already exists" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:wrongparams}%%MAKETEXT{"Wrong parameters to [_1]" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:lastversion}%#{
+}#<a href="%SCRIPTURL{"view" web="%%PARAM1%" topic="%PARAM2%" rev="%WORKFLOWLAST{"%PARAM3%" format="$rev"}%" web="%PARAM1%" topic="%PARAM2%"}%">%MAKETEXT{"revision [_1]" args="%WORKFLOWLAST{"%PARAM3%" format="$rev" web="%PARAM1%" topic="%PARAM2%"}%"}%</a>%TMPL:END%
+
+%TMPL:DEF{workflow:badct}%%MAKETEXT{"Controlled topic [_1] could not be loaded" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:badwf}%%MAKETEXT{"Workflow [_1] could not be loaded" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:nosuchtx}%%MAKETEXT{"Workflow '[_1]' does not permit '[_2]' to use transition '[_3]' from state '[_4]'" args="%PARAM1%,%PARAM2%,%PARAM3%,%PARAM4%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:cantedit}%%MAKETEXT{"Workflow does not permit [_1] to modify [_2]" args="%PARAM1%,%PARAM2%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:neverinstate}%%MAKETEXT{"[_1] has never been in state '[_2]'" args="%PARAM1%,%PARAM2%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:leaseconflict}%
+%MAKETEXT{"[_1] is editing [_2], and their lock is still active for another [_3]" args="%PARAM1%,%PARAM2%,%PARAM3%"}%
+
+%MAKETEXT{"You must ask [_1] to close their edit and release their lock before you can change the state of the topic." args="%PARAM1%"}%
+<form action="%SCRIPTURLPATH{"rest"}%/WorkflowPlugin/changeState" method="post">
+%MAKETEXT{"In an emergency you can transition the topic anyway, by clicking "}%
+<input type="hidden" name="breaklock" value="on" />
+<input type="hidden" name="topic" value="%WEB%.%TOPIC%" />
+<input type="hidden" name="WORKFLOWSTATE" value="%PARAM3%" />
+<input type="hidden" name="WORKFLOWACTION" value="%PARAM4%" />
+<input type="hidden" name="WORKFLOWCOMMENT" value="%PARAM5%" />
+<input type="submit" class="foswikiButton" value="%MAKETEXT{"Force the transition anyway"}%" />
+</form>%TMPL:END%
+
+#{ Button for edit, active and strike versions }#
+%TMPL:DEF{workflow:editbutton}%#{
+}#<a href="%PARAM1%"><strong>%MAKETEXT{"Edit"}%</strong></a> %TMPL:END%
+
+%TMPL:DEF{workflow:strikeedit}%<strike>%MAKETEXT{"Edit"}%</strike>%TMPL:END%
+
+#{ Button for attach, active and strike versions }#
+%TMPL:DEF{workflow:attachbutton}%#{
+}#<a href="%PARAM1%"><strong>%MAKETEXT{"Attach"}%</strong></a> %TMPL:END%
+
+%TMPL:DEF{workflow:strikeattach}%<strike>%MAKETEXT{"Attach"}%</strike>%TMPL:END%
+
+#{ Components of the a transition trigger }#
+%TMPL:DEF{workflow:txformhead}%#{
+}#<form method="POST" action="%SCRIPTURL{"rest"}%/WorkflowPlugin/changeState">#{
+}#<input type="hidden" name="WORKFLOWSTATE" value="%PARAM1%" />#{
+}#<input type="hidden" name="topic" value="%PARAM2%.%PARAM3%" />#{
+}#<input type="hidden" name="t" value=%GMTIME{"$epoch"}% /> %TMPL:END%
+
+%TMPL:DEF{workflow:txformfoot}%</form>%TMPL:END%
+
+%TMPL:DEF{workflow:txformone}%#{
+}#<input type="hidden" name='WORKFLOWACTION' value="%PARAM1%" />#{
+}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" name="%PARAM1%" value="%PARAM1%" /> %TMPL:END%
+
+%TMPL:DEF{workflow:txformmany}%<select name="WORKFLOWACTION">#{
+}#%PARAM1%#{
+}#</select>#{
+}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%MAKETEXT{"Change status"}%" />%TMPL:END%
+
+%TMPL:DEF{workflow:txformeach}% <option>%PARAM1%</option> %TMPL:END%
+
+%TMPL:DEF{workflow:txformnone}%%MAKETEXT{"No transitions available"}%%TMPL:END%
+#{ Button to trigger a fork }#
+%TMPL:DEF{workflow:txforkbutton}%#{
+}#<form name="forkWorkflow" action="%SCRIPTURL{"rest"}%/WorkflowPlugin/fork" method="POST">#{
+}#<input type="hidden" name="topic" value="%PARAM1%" />#{
+}#<input type="hidden" name="newnames" value="%PARAM2%" />#{
+}#<input type="hidden" name="lockdown" value="%PARAM3%" />#{
+}#<input type="hidden" name="endPoint" value="%PARAM1%" />#{
+}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%IF{"'%PARAM4%'='Fork'" then="%MAKETEXT{"Fork"}%" else="%PARAM4%"}%"}%#{
+}#</form> %TMPL:END%
+
+#{ Email sent on a transition }#
+%TMPL:DEF{workflow:transitionemail}%
+From: %WIKIWEBMASTERNAME% <%WIKIWEBMASTER%>
+To: %PARAM1%
+Subject: %PARAM2% - transitioned to %PARAM3%
+Auto-Submitted: auto-generated
+MIME-Version: 1.0
+Content-Type: text/plain
+
+%%PARAM4% has moved %PARAM2% to %PARAM3%
+%TMPL:END%
+
+1

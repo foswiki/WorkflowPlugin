@@ -10,5 +10,4 @@ $Foswiki::cfg{Plugins}{WorkflowPlugin}{Debug} = 0;
 # and is very likely to break compatibility with existing workflows, but does integrate the plugin
 # more closely with the rest of Foswiki.
 $Foswiki::cfg{Plugins}{WorkflowPlugin}{UpdateFoswikiACLs} = 0;
-
 1;

@@ -4,6 +4,7 @@ lib/Foswiki/Plugins/WorkflowPlugin.pm 0640 Plugin Perl module
 lib/Foswiki/Plugins/WorkflowPlugin/ControlledTopic.pm 0640 Plugin Perl module
 lib/Foswiki/Plugins/WorkflowPlugin/Mither.pm 0640 Plugin Perl module
 lib/Foswiki/Plugins/WorkflowPlugin/Workflow.pm 0640 Plugin Perl module
+lib/Foswiki/Plugins/WorkflowPlugin/WorkflowException.pm 0640 Plugin Perl module
 pub/System/WorkflowPlugin/Flow.gif 0640 Example image
 pub/System/WorkflowPlugin/Flow.draw 0640 Example image
 pub/System/WorkflowPlugin/convert.pl.txt 0640 Conversion script
@@ -23,6 +24,6 @@ data/Sandbox/TMApprovalForm.txt 0640 Forms for approval workflow
 data/Sandbox/ApprovedForm.txt 0640 Forms for approval workflow
 templates/mailworkflowmither.tmpl 0640 Mail template
 templates/mailworkflowtransition.tmpl 0640 Mail template
-templates/oopswfplease.tmpl 0640 Lease conflict template
+templates/workflowstrings.tmpl 0640 Translatable strings template
 templates/workflowedit.tmpl 0640 Edit template
 tools/workflowremind 0640 Perl script
