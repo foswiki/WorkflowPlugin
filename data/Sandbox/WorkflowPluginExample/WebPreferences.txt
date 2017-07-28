@@ -1,0 +1,25 @@
+---+!! <nop>%WEB% Web Preferences
+
+%TOC%
+
+---++ Appearance
+
+   * Set WEBBGCOLOR = #EBABEFAC
+      * <sticky>web-specific background color, <span style='background-color: %WEBBGCOLOR%'> current color </span></sticky>
+
+   * Set SITEMAPLIST = on
+      * set to =off= to hide this web from the [[%SYSTEMWEB%.SiteMap][SiteMap]]
+
+   * Set WEBSUMMARY = Working example for the WorkflowPlugin
+      * description what this web is used for
+
+   * Set NOSEARCHALL = on
+      * if set to =on=, this web will be exclude web from a global search
+
+   * Set WEBFORMS = RevisionForm, ApproveForm
+      * Comma separated list of forms that can be attached to topics in this web. See [[%SYSTEMWEB%.DataForms][DataForms]] for more information.
+
+---
+%INCLUDE{"%SYSTEMWEB%.WebPreferencesHelp"}%
+
+

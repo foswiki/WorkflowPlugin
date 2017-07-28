@@ -254,13 +254,15 @@ TOPIC
     $query->param( 'topic',    $this->{test_web} . '.ForkHandles' );
     $this->createNewFoswikiSession( 'WikiGuest', $query );
     try {
-        ($text) = $this->capture( $UI_FN, $this->{session} );
+        my ( $t, $r, $o, $e ) = $this->capture( $UI_FN, $this->{session} );
+        print STDERR $e;
     }
     otherwise {
         $this->assert( 0, Data::Dumper->Dump( [shift] ) );
     };
 
     #print `cat $Foswiki::cfg{DataDir}/$this->{test_web}/ForkHandles.txt`;
+
     my $controlledTopic =
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
         $this->{test_web}, 'ForkHandles' );

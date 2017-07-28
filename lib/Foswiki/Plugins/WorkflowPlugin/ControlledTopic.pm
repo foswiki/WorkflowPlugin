@@ -298,18 +298,9 @@ sub _checkAllowed {
 
     my @allow = split( /\s*,\s*/, $this->expandMacros( $allowlist // '' ) );
 
-    #print STDERR "_checkAllowed $id in ". join(',', @allow)."\n";#detail
+    #print STDERR "_checkAllowed $id in ". join(',', @allow)."\n"; #detail
 
-    unless ( scalar @allow ) {
-
-        #print STDERR "All can $action\n";#detail
-        Foswiki::Func::writeDebug(
-            __PACKAGE__ . " Everyone is allowed $action" )
-          if $this->{debug};
-        $allowed = 1;
-    }
-
-    elsif ( grep { $_ eq 'nobody' } @allow ) {
+    if ( grep { $_ eq 'nobody' } @allow ) {
 
         #print STDERR "None can $action\n";#detail
         Foswiki::Func::writeDebug( __PACKAGE__ . " nobody is allowed $action" )
@@ -318,48 +309,76 @@ sub _checkAllowed {
     }
 
     elsif ( scalar(@allow) ) {
+        my ( @yes, @no );
 
-        #print STDERR "Some can $action ".join(',', @allow)."\n";#detail
-        $allowed = 0;
+        #print STDERR "Some can '$action': ".join(',', @allow)."\n";#detail
+
+        # Split into allow (yes) and deny (no)
         foreach my $entry (@allow) {
             ( my $waste, $entry ) =
               Foswiki::Func::normalizeWebTopicName( undef, $entry );
 
-            if ( $entry eq $thisUser ) {
+            if ( $entry =~ /^not\((.*)\)$/ ) {
+                $entry = $1;
+                if ( $entry =~ /^LASTUSER_(.+)$/ ) {
+                    $entry = $this->{workflow}->getLast($1);
+                    if ($entry) {
+                        $entry = $entry->{author};
+                        $entry =~ s/^.*\.//;    # strip web
+                    }
+                }
 
-                #print STDERR "$thisUser is OK\n";#detail
-                Foswiki::Func::writeDebug( __PACKAGE__
-                      . " $thisUser allowed '$action' by explicit name listing"
-                ) if $this->{debug};
-                $allowed = 1;
-                last;
+                #print STDERR "$entry cannot\n";#detail
+                push( @no, $entry );
             }
 
-            # If a not(LASTUSER_{state}) is specified, translate this
-            # to a wikiname and authorize the current user
-            elsif ( $entry =~ /^not\((LASTUSER_.+)\)$/ ) {
-                my $check      = $1;
-                my $notAllowed = $this->{workflow}->getState($check);
-                $notAllowed =~ s/^.*\.//;    # strip web
-                if ( $thisUser eq $notAllowed ) {
+            else {
+                #print STDERR "$entry can\n";#detail
+                push( @yes, $entry );
+            }
+        }
+
+        $allowed = 1;
+
+        # not() trumps everything else
+        if ( scalar(@no) ) {
+            foreach my $entry (@no) {
+                if ( $entry eq $thisUser
+                    || Foswiki::Func::isGroup($entry)
+                    && Foswiki::Func::isGroupMember( $entry, $thisUser, {} ) )
+                {
+                    #print STDERR "NO trumps YES\n";#detail
                     Foswiki::Func::writeDebug( __PACKAGE__
-                          . " $thisUser denied '$action' by not($check)" )
-                      if $this->{debug};
+                          . " $thisUser denied '$action' by explicit not() listing"
+                    ) if $this->{debug};
                     $allowed = 0;
                     last;
                 }
             }
+        }
 
-            elsif (Foswiki::Func::isGroup($entry)
-                && Foswiki::Func::isGroupMember( $entry, $thisUser, {} ) )
-            {
-                Foswiki::Func::writeDebug( __PACKAGE__
-                      . " Allowed '$action' by membership of allowed" )
-                  if $this->{debug};
-                $allowed = 1;
-                last;
+        if ( $allowed && scalar(@yes) ) {
+            $allowed = 0;
+            foreach my $entry (@yes) {
+                if ( $entry eq $thisUser
+                    || Foswiki::Func::isGroup($entry)
+                    && Foswiki::Func::isGroupMember( $entry, $thisUser, {} ) )
+                {
+                    #print STDERR "YES is allowed\n";#detail
+                    Foswiki::Func::writeDebug( __PACKAGE__
+                          . " $thisUser allowed '$action' by explicit name listing"
+                    ) if $this->{debug};
+                    $allowed = 1;
+                    last;
+                }
             }
         }
+
+    }
+    else {
+        Foswiki::Func::writeDebug( __PACKAGE__ . " Anyone is allowed $action" )
+          if $this->{debug};
+        $allowed = 1;
     }
 
    #print STDERR "Start FW ".($allowed // '?')." ".($fwperm // '?')."\n";#detail
@@ -382,18 +401,11 @@ sub _checkAllowed {
     }
 
     #print STDERR "Nonadmin ".($allowed || 0)."\n";#detail
-    unless ($allowed) {
-        if ( Foswiki::Func::isAnAdmin() ) {
-            $allowed = 1;
-            Foswiki::Func::writeDebug __PACKAGE__
-              . " $action denied, but user is admin\n"
-              if $this->{debug};
-        }
-
-        else {
-            Foswiki::Func::writeDebug( __PACKAGE__ . " Denied '$action'" )
-              if $this->{debug};
-        }
+    if ( !$allowed && Foswiki::Func::isAnAdmin() ) {
+        $allowed = 1;
+        Foswiki::Func::writeDebug __PACKAGE__
+          . " $action denied, but $thisUser is admin\n"
+          if $this->{debug};
     }
 
     $this->{_allowed}{$id} = $allowed;
@@ -510,7 +522,7 @@ sub canTransition {
 
 =begin TML
 
----++ ObjectMethod changeState($action[, $comment [,$breaklock]]) -> $boolean
+---++ ObjectMethod changeState($action[, $comment [,$breaklock]]) -> $form
 
 Change the state of the topic, noitifying the change to listeners
 and saving the topic.
@@ -527,7 +539,7 @@ the current user under workflow rules.
 
 @throw WorkflowException if there's a problem
 
-@return the new form, if the form has changed
+@return the name of the new form, if the form has changed, undef otherwise
 
 =cut
 
@@ -755,27 +767,48 @@ sub save {
     $this->{meta}->put( 'WORKFLOW', { name => $state } );
     $this->{meta}->put( 'FORM', { name => $this->{form} } ) if $this->{form};
 
-    my %can;
+    my %perms;
     foreach my $mode (qw/CHANGE VIEW/) {
-        $can{$mode} =
-          $this->expandMacros(
-            $this->{workflow}->{states}->{$state}->{ lc("allow$mode") } );
+        $perms{$mode} = [
+            split(
+                /\s*,\s*/,
+                $this->expandMacros(
+                    $this->{workflow}->{states}->{$state}->{ lc("allow$mode") }
+                )
+            )
+        ];
         $this->{meta}->remove( 'PREFERENCE', "ALLOWTOPIC$mode" );
+        $this->{meta}->remove( 'PREFERENCE', "DENYTOPIC$mode" );
     }
 
     # Lockdown is used in forking
-    $can{CHANGE} = 'nobody' if ($lockdown);
+    $perms{CHANGE} = ['nobody'] if ($lockdown);
 
-    while ( my ( $mode, $who ) = each %can ) {
-        $this->{meta}->putKeyed(
-            'PREFERENCE',
-            {
-                name  => "ALLOWTOPIC$mode",
-                title => "ALLOWTOPIC$mode",
-                value => $who,
-                type  => 'Set'
+    while ( my ( $mode, $whos ) = each %perms ) {
+        foreach my $who (@$whos) {
+            if ( $who =~ /not\((.*)\)/ ) {
+                $this->{meta}->putKeyed(
+                    'PREFERENCE',
+                    {
+                        name  => "DENYTOPIC$mode",
+                        title => "DENYTOPIC$mode",
+                        value => $1,
+                        type  => 'Set'
+                    }
+                );
             }
-        );
+            else {
+                $this->{meta}->putKeyed(
+                    'PREFERENCE',
+                    {
+                        name  => "ALLOWTOPIC$mode",
+                        title => "ALLOWTOPIC$mode",
+                        value => $who,
+                        type  => 'Set'
+                    }
+                );
+            }
+        }
     }
 
     # Only add the temporary grant if the current user does *not*

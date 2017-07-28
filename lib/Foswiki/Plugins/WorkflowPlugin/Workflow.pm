@@ -62,6 +62,7 @@ sub getWorkflow {
             name        => "$web.$topic",
             states      => {},
             transitions => [],
+            tags        => '',
             debug       => $meta->getPreference('WORKFLOWDEBUG')
         },
         $class
@@ -135,6 +136,22 @@ sub getWorkflow {
       if !$this->{defaultState} || scalar(@expectTables);
 
     $cache{"$web.$topic"} = $this;
+
+    # Extract tag settings from *Set and META:PREFERENCE and
+    # set session preferences
+    my @broke = split( /^$Foswiki::regex{setVarRegex}/m, $text );
+    while ( my $pref = shift @broke ) {
+        next unless ( $pref // '' ) eq 'Set';
+        $pref = shift @broke;
+        next unless ( $pref // '' ) =~ /^WORKFLOW[a-zA-Z0-9_]+$/;
+        Foswiki::Func::setPreferencesValue( $pref, shift @broke // '' );
+    }
+
+    foreach my $pref ( $meta->find('PREFERENCE') ) {
+        if ( $pref->{name} =~ /^WORKFLOW/ ) {
+            Foswiki::Func::setPreferencesValue( $pref->{name}, $pref->{value} );
+        }
+    }
 
     return $this;
 }

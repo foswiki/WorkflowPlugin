@@ -1,0 +1,50 @@
+This is an example workflow description used with the %SYSTEMWEB%.WorkflowPlugin.
+
+See ControlledDocument for a document controlled by this workflow.
+
+Any topic using this workflow can use settings from this topic that start
+with =WORKFLOW= - for example,
+   * Set WORKFLOWNOTICE = This document is under workflow control
+
+The workflow is a very simple one, with only three states and four
+transitions:
+
+<verbatim>
+UNDERREVISION ------>-------- PLEASEAPPROVE --->--- APPROVED
+       ^      needs approval        |       approve    |
+       |                            |                  |
+       +------------<---------------'                  |
+       |         reject                                |
+       |                                               |
+       `-------------------------<---------------------'
+                               revise
+</verbatim>
+Anyone can make the =needs approval= and =revise= transitions, but
+only the (fictional) !QualityGroup can make the 'approve' and 'reject'
+transitions. Further,
+   * the document can only be edited in UNDERREVISION state. In all other states, it is locked for editing
+   * when a topic is moved to PLEASEAPPROVE state, it gets the ApproveForm
+   * when a topic is moved to UNDERREVISION state, it gets the RevisionForm
+   * the user who last moved a document to UNDERREVISION is not allowed to move it to APPROVED.
+   * WikiGuest is denied most actions unti lthe document is in approved state
+   
+---++ States
+The first table describes the states a topic can be in.
+
+| *State*       | *Allow VIEW*   | *Allow CHANGE* | *Message*            |
+| UNDERREVISION | not(WikiGuest) | not(WikiGuest) | Under revision       |
+| PLEASEAPPROVE | not(WikiGuest) | nobody         | Waiting for approval |
+| APPROVED      |                | nobody         | Approved for release |
+
+--++ Transitions
+The second table describes the transitions available from each state.
+
+| *State*        | *Action*       | *Next State*  | *Allowed*      | *Form*       |
+| UNDERREVISION  | needs approval | PLEASEAPPROVE | not(WikiGuest) | ApproveForm  |
+| APPROVED       | revise         | UNDERREVISION | not(LASTUSER_UNDERREVISION) | RevisionForm |
+| PLEASEAPPROVE  | approve        | APPROVED      | QualityGroup   |              |
+| PLEASEAPPROVE  | reject         | UNDERREVISION | QualityGroup   | RevisionForm |
+
+%META:PREFERENCE{name="WORKFLOWDEBUG" value="1"}%
+%META:PREFERENCE{name="WORKFLOWSET" value="Example setting"}%
+

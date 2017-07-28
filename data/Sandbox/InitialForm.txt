@@ -1,7 +1,0 @@
-%META:TOPICINFO{author="ProjectContributor" date="1407730685" format="1.1" version="1"}%
-%META:TOPICPARENT{name="WebHome"}%
-| *Name* | *Type* | *Size* | *Values* | *Tooltip messages* | *Mandatory* | 
-| Issue Name | text | 73 |  | Illustrative name of issue | M | 
-| Issue Description | textarea | 55x5 |  | Short description of issue |  | 
-| Issue Type | select | 1 | , Defect, Enhancement, Other |  |  | 
-| History | label | 1 | $percntWORKFLOWHISTORY%		 |  | |

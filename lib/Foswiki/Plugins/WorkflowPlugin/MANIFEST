@@ -8,20 +8,13 @@ lib/Foswiki/Plugins/WorkflowPlugin/WorkflowException.pm 0640 Plugin Perl module
 pub/System/WorkflowPlugin/Flow.gif 0640 Example image
 pub/System/WorkflowPlugin/Flow.draw 0640 Example image
 pub/System/WorkflowPlugin/convert.pl.txt 0640 Conversion script
-data/Sandbox/DefectWorkflow.txt 0640 Example workflow
-data/Sandbox/DefectOne.txt 0640 Example defect
-data/Sandbox/DefectTwo.txt 0640 Example defect
-data/Sandbox/ApprovalViewTemplate.txt 0640 Template for DefectTwo style
-data/Sandbox/InitialForm.txt 0640 Forms for defect workflow
-data/Sandbox/InProcessForm.txt 0640 Forms for defect workflow
-data/Sandbox/SubmittedForm.txt 0640 Forms for defect workflow
-data/Sandbox/CompletedForm.txt 0640 Forms for defect workflow
-data/Sandbox/ControlledDocument.txt 0640 Example document
-data/Sandbox/DocumentApprovalWorkflow.txt 0640 Example workflow
-data/Sandbox/UnderRevisionForm.txt 0640 Forms for defect workflow
-data/Sandbox/QMApprovalForm.txt 0640 Forms for approval workflow
-data/Sandbox/TMApprovalForm.txt 0640 Forms for approval workflow
-data/Sandbox/ApprovedForm.txt 0640 Forms for approval workflow
+data/Sandbox/WorkflowPluginExample/ApproveForm.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/ControlledDocument.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/DocumentApprovalWorkflow.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/RevisionForm.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/WebHome.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/WebLeftBarExample.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/WebPreferences.txt 0640 Example workflow
 templates/mailworkflowmither.tmpl 0640 Mail template
 templates/mailworkflowtransition.tmpl 0640 Mail template
 templates/workflowstrings.tmpl 0640 Translatable strings template

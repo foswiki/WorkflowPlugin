@@ -1,0 +1,5 @@
+Example form used by the DocumentApprovalWorkflow. Topics get this form when they are moved to PLEASEAPPROVE state
+
+| *Name* | *Type* | *Size* | *Values* | *Tooltip messages* | *Attributes* | 
+| Summary of changes | text | 60 | | | | 
+

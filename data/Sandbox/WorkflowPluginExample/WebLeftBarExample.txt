@@ -1,0 +1,3 @@
+%WIKIUSERNAME%
+| *Controlled Documents* |
+%SEARCH{"ControlledDocument" scope="topic" nonoise="on" format="| [[$topic]] |"}%

@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
+%META:TOPICINFO{author="ProjectContributor" date="1501261498" format="1.1" version="1"}%
 %META:TOPICPARENT{name="ReferenceManual"}%
 ---+ %TOPIC%
 <!--
@@ -48,7 +48,8 @@ transition table describes how documents move between states (arcs in
 the flow diagram).
 
 This is easiest illustrated using an example (available as
-Sandbox.DocumentApprovalWorkflow if the plugin is installed).
+Sandbox.DocumentApprovalWorkflow / Sandbox.ControlledDocument if the
+plugin is installed).
 
 Each row of the state table defines a state that a topic can be in:
 
@@ -120,6 +121,10 @@ A typical usage of the form would be to collect additional information as the to
 If a *Notify* column is given, that column can contain a
 comma-separated list of notification targets to be informed when the
 transition is fired.  See #TransitionNotification below for more information.
+
+Any [[%SYSTEMWEB%.PreferenceSettings][preference settings]] in the workflow
+description topic that start with =WORKFLOW= are automatically available
+when topics that use that workflow are viewed.
 
 ---++ Transition Notification
 If a *Notify* column is given in the transition table, then that column
@@ -200,7 +205,7 @@ attached to the viewed topic:
 | WAITINGFORAPPROVAL | approve  | %META{"formfield" name="ApprovedState"}% | %META{"formfield" name="MayApprove"}% |
 </verbatim>
 
-If you want to exclude the user who changed a specific state last, even though the user is generally allowed to, you can add =not(LASTUSER_{State})= to the =Allowed= column of the transition table and the last user for the specified state will be excluded.
+See #AccessControl for more information.
 
 You can also define other macros starting with =WORKFLOW= in the workflow
 description topic. These will be expanded to their defined values in any
@@ -217,8 +222,8 @@ A common requirement is to report on the status of topics that are in different 
 ---++ Access Control
 The plugin uses extended Foswiki permissions to manage access to topics.
 
-In the state table, you can have any number of "Allow" columns, for example
-"Allow CHANGE" or "Allow VIEW". These columns dictate the Foswiki permissions
+In the state table, you can have any number of 'Allow' columns, for example
+'Allow CHANGE' or 'Allow VIEW'. These columns dictate the Foswiki permissions
 that are applied when a topic is transitioned to that state by the plugin. For
 example, if the state table contains:
 <verbatim>
@@ -231,18 +236,13 @@ will automatically be removed, and the permissions:
    * Set ALLOWTOPICVIEW = *
 will be added to the topic.
 
-Empty 'Allow' columns in the state table are taken as meaning no restriction.
-The special entry =nobody= can be used to restrict access for everyone (except
-admins).
-
-The ability to change the state of a topic is controlled by the *Allowed*
-column of the state table. If you leave the *Allowed* column empty,
-then anyone will be able to perform that transition.
-
-The *Allow* columns in the state table and the *Allowed* column in the
-state table support the use of Foswiki macros. The special entry
-=nobody= can be used to restrict access for everyone (except
-admins).
+Similarly the 'Allowed' column in the transition table controls who is allowed to perform that transition.
+Normally entries in 'Allow' columns are user (or group) names, such as %WIKINAME%. However:
+   * Empty 'Allow*' columns are taken as meaning no restriction.
+   * The special entry =nobody= can be used to restrict access for everyone (except admins).
+   * You can _exclude_ a specific user (or group) from access using =not(%WIKINAME%)=.
+   * You can explicitly exclude the user who last transitioned the topic to a specific state using =not(LASTUSER_{State})=.
+   * You can use Foswiki macros. These will be expanded in the context of the controlled topic.
 
 %X% For historical reasons, *Allow Edit* is mapped to *Allow CHANGE*.
 
@@ -359,6 +359,6 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 %META:FIELD{name="Repository" attributes="" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
 %META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki.org/Support/WorkflowPlugin"}%
 %META:FIELD{name="Home" attributes="" title="Home" value="http://foswiki.org/Extensions/WorkflowPlugin"}%
-%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1407507830" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1407507830" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1407507830" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1501261498" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1501261498" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1501261498" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%

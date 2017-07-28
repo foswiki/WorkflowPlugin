@@ -31,7 +31,7 @@ sub set_up {
 | *State* | *Allow Edit* | *Allow View* | *Message* |
 | S1      |              |              | S1 message |
 | S2      | nobody       | nobody       | S2 message |
-| S3      | %META{"formfield" name="F2"}% | $user        | S3 message |
+| S3      | %META{"formfield" name="F2"}% | not($user)        | S3 message |
 | S4      | %META{"formfield" name="F1"}% | %META{"formfield" name="F2"}% | S3 message |
 
 | *State*  | *Action* | *Next State*  | *Allowed* | *Form*        |
@@ -54,6 +54,7 @@ FORM
 %META:FORM{name="TestForm"}%
 %META:FIELD{name="Workflow" value="$this->{test_workflow}"}%
 %META:FIELD{name="F1" value="$user"}%
+%META:FIELD{name="F2" value="FatherTed"}%
 TOPIC
 }
 
@@ -198,11 +199,36 @@ sub test_ControlledTopic_changeState {
     $this->assert( $controlledTopic->canTransition("toS3") );
 
     $form = $controlledTopic->changeState( 'toS3', 'golem' );
-    $this->assert_equals( 'TestForm', $form );
 
+    # Form isn't changing, so...
+    $this->assert_null($form);
+
+    # In S3, only F2 can edit i.e. FatherTed
+    #print `cat $Foswiki::cfg{DataDir}/$this->{test_web}/TestControlled.txt`;
+    $this->assert(
+        !Foswiki::Func::checkAccessPermission(
+            "CHANGE", Foswiki::Func::getWikiName(),
+            undef,    $controlledTopic->{topic},
+            $controlledTopic->{web}
+        )
+    );
+    $this->assert(
+        !Foswiki::Func::checkAccessPermission(
+            "VIEW", Foswiki::Func::getWikiName(),
+            undef,  $controlledTopic->{topic},
+            $controlledTopic->{web}
+        )
+    );
     $this->assert(
         Foswiki::Func::checkAccessPermission(
-            "CHANGE", Foswiki::Func::getWikiName(),
+            "VIEW", $this->{test_user},
+            undef,  $controlledTopic->{topic},
+            $controlledTopic->{web}
+        )
+    );
+    $this->assert(
+        Foswiki::Func::checkAccessPermission(
+            "CHANGE", $this->{test_user},
             undef,    $controlledTopic->{topic},
             $controlledTopic->{web}
         )
@@ -327,7 +353,7 @@ sub test_accessControls2 {
     my $this = shift;
     my $user = Foswiki::Func::getWikiName();
 
-    # In state S3, somebody can edit, $user can view. F1 can transition.
+    # In state S3, F2 can edit, $user can view. F1 can transition.
     Foswiki::Func::saveTopic( $this->{test_web}, 'TestInvisible', undef,
         <<TOPIC);
 %META:WORKFLOW{name="S3"}%
@@ -338,7 +364,11 @@ TOPIC
     my $controlledTopic =
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
         $this->{test_web}, 'TestInvisible' );
-    $this->assert( $controlledTopic->canView() );
+
+    # not($user) excludes us
+    $this->assert( !$controlledTopic->canView() );
+
+    # Only RinceWind can edit
     $this->assert( !$controlledTopic->canEdit() );
     $this->assert( $controlledTopic->canTransition("to S1") );
 }
@@ -347,7 +377,7 @@ sub test_accessControls3 {
     my $this = shift;
     my $user = Foswiki::Func::getWikiName();
 
-    # In state S3, somebody can edit, $user can view. F1 can transition.
+    # In state S3, F2 can edit, $user can view. F1 can transition.
     Foswiki::Func::saveTopic( $this->{test_web}, 'TestInvisible', undef,
         <<TOPIC);
 %META:WORKFLOW{name="S3"}%
@@ -358,7 +388,7 @@ TOPIC
     my $controlledTopic =
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
         $this->{test_web}, 'TestInvisible' );
-    $this->assert( $controlledTopic->canView() );
+    $this->assert( !$controlledTopic->canView() );
     $this->assert( $controlledTopic->canEdit() );
     $this->assert( !$controlledTopic->canTransition("to S1") );
 }
@@ -395,7 +425,9 @@ TOPIC
       Foswiki::Func::readTopic( $this->{test_web}, 'TestPlugs' );
     $this->assert_equals( "CohenTheBarbarian",
         $meta->getPreference("ALLOWTOPICCHANGE") );
-    $this->assert_equals( "WikiGuest", $meta->getPreference("ALLOWTOPICVIEW") );
+
+    #print `cat $Foswiki::cfg{DataDir}/$this->{test_web}/TestPlugs.txt`;
+    $this->assert_equals( "WikiGuest", $meta->getPreference("DENYTOPICVIEW") );
 
     $controlledTopic =
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(

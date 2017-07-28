@@ -1,0 +1,5 @@
+Example form used by the DocumentApprovalWorkflow. Topics get this form when they are moved to UNDERREVISION state
+
+| *Name* | *Type* | *Size* | *Values* | *Tooltip messages* | *Attributes* | 
+| Reason for revision | text | | | | | 
+

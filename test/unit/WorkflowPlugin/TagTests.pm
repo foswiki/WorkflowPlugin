@@ -237,7 +237,7 @@ sub test_WORKFLOWLAST {
     my $this = shift;
     my $text = '%WORKFLOWLAST{"S1"}%';
     $this->assert_equals(
-        '4: S1 Author4 04 Jul 2017 - 00:00',
+        '4: S1 Author4 ' . Foswiki::Time::formatTime( 1499126400, '$http' ),
         Foswiki::Func::expandCommonVariables(
             $text, 'TestControlled', $this->{test_web}
         )

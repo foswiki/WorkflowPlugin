@@ -158,7 +158,8 @@ sub _formatHistoryRecord {
         $tmpl =~ s/\$version/\$name/g;
         $tmpl =~ s/\$rev/\$name/g;
         $tmpl =~ s/\$index/$index/g;
-        $tmpl =~ s/\$date/$date/g;
+        $tmpl =~ s/\$time/\$http/g;
+        $tmpl =~ s/\$date/\$http/g;
 
         # Expand time features
         $tmpl = Foswiki::Func::formatTime( $hist->{date} // 0, $tmpl );
@@ -518,7 +519,7 @@ sub _WORKFLOWLASTTIME {
     my ( $session, $attr, $topic, $web ) = @_;
     return _getString( 'wrongparams', 'WORKFLOWLASTTIME' )
       unless $attr->{_DEFAULT};
-    $attr->{format} = '$date';
+    $attr->{format} = '$day $month $year - $hours:$minutes';
     return _WORKFLOWLAST( $session, $attr, $topic, $web );
 }
 
@@ -695,6 +696,7 @@ sub beforeEditHandler {
     try {
         ( $web, $topic ) = _getTopicParams( {}, $web, $topic );
 
+        require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
         $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic );
@@ -733,6 +735,7 @@ sub beforeAttachmentSaveHandler {
     try {
         ( $web, $topic ) = _getTopicParams( {}, $web, $topic );
 
+        require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
         $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic );
@@ -769,6 +772,7 @@ sub _solrIndexTopicHandler {
     try {
         ( $web, $topic ) = _getTopicParams( {}, $web, $topic );
 
+        require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
         $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic );
