@@ -1,10 +1,10 @@
-%META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
+META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
 #VarWEB
 ---+++ WORKFLOW* -- macros associated with WorkflowPlugin
 
 All the following macros accept web and topic parameters:
 | *Parameter* | *Meaning* | *Default* |
-| =web= | (Optional) name of the web containing the topic | current web |
+| =web= | (Optional) name of the web containing the =topic= | current web |
 | =topic= | (Optional) name of the topic (may use web.topic syntax) | current topic |
 
 Where it makes sense, the macros also accept a =rev= parameter.
@@ -12,25 +12,24 @@ Where it makes sense, the macros also accept a =rev= parameter.
 If the topic is *not* controlled, then any references to =WORKFLOW=
 macros are simply removed. You can use this behaviour to place these
 tags in the header or footer in your skin templates. They appear only
-if the currently displayed document is controlled. Otherwise, they are
-just removed and do not disturb the layout.
+if the currently displayed topic is controlled.
 
 ---++++ =%<nop>WORKATTACHTOPIC%=
-Expands to a link that lets you attach to the topic (if the you are not
+Expands to a link that lets you attach to the topic (if you are not
 able to modify the topic, either in the workflow sense or according to the
 tandard access controls, the link will be <strike>struck out</strike>).
 
 ---++++ =%<nop>WORKFLOWEDITTOPIC%=
-Expands to a link that lets you edit the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
+Expands to a link that lets you edit the topic (if you are not able to
+modify the topic, either in the workflow sense or according to the
+standard access controls, the link will be <strike>struck
+out</strike>).|
 
 ---++++ =%<nop>WORKFLOWFORK{...}%=
-Expands to a button that will create a copy of the _current_ topic.
-
-When the button is pressed, Foswiki will create a copy of
-the current topic (which must be in a workflow).
+Expands to a button that will create one or more copies of a topic
+(which must be in a workflow).
 
 | *Parameter* | *Meaning* | *Default* |
-| ="TopicName"= | (Optional) name of the topic to fork | current topic |
 | =newnames="NameOne,NameTwo"= | Comma-separated list of name(s) of the new topic(s) to create, You can use a web specifier on the topic names. | required, no default. |
 | =label="Fork"= | Label to use in the button | ="Fork"= |
 | =lockdown="on"= | Set this if you want the forked topic to be set as uneditable after the fork | =off= |
@@ -43,16 +42,16 @@ tracked. Both the copied topic and the new topic will have workflow
 history entries added.
 
 For example,
-=%<nop>WORKFLOWFORK{"OriginalTopic" label="Divide and conquer" newnames="ForkPathOne,ForkPathTwo" lockdown="on"}%= will create two copies of =OriginalTopic=, named =ForkPathOne= and =ForkPathTwo= and set the =OriginalTopic= as uneditable (using ALLOWTOPICCHANGE).
+=%<nop>WORKFLOWFORK{topic="OriginalTopic" label="Divide and conquer" newnames="ForkPathOne,ForkPathTwo" lockdown="on"}%=
+will create two copies of =OriginalTopic=, named =ForkPathOne= and
+=ForkPathTwo= and set the =OriginalTopic= as uneditable (using
+ALLOWTOPICCHANGE).
 
 The histories in both the fork copies and the original topic record
 what happened.
 
-You have to be able to modify the topic (both in the workflow sense
-and according to the standard access controls) in order to fork.
-
 %X% due to a bug in versions of the plugin prior to Oct 2009, the
- default "TopicName" parameter was interpreted as the name of the
+ default parameter was interpreted as the name of the
  *new* topic to fork to. This has been corrected, but the macro will
  revert to the old meaning if you omit the =newnames= parameter.
 
@@ -63,54 +62,51 @@ one transition, or (c) empty space if the current user is not allowed
 to perform any action. You can change the format of the button using a
 CSS class (see WORKFLOWTRANSITIONCSSCLASS below)
 
-
 ---++++ =%<nop>WORKFLOWHISTORY{...}%=
 Expands to the history of state transitions the topic has undergone.
 
 | *Parameter* | *Meaning* | *Default* |
-| =format= | Format of each result | Value of =%<nop>WORKFLOWHISTORYFORMAT%= |
+| =format= | Format of each transition | =$state -- $date= |
+| =forkto= | Format of each fork to | undefined |
+| =forkfrom= | Format of each fork from | undefined |
 | =header= | Header before results | |
 | =footer= | Footer after results | |
 | =separator= | Separator between results | |
 | =include= | Regular expression matching states to include | |
 | =exclude= | Regular expression matching states to exclude | |
 
-The format is used as a template for each new entry, and should
-include all the formatting necessary to make the history look nice
-when it is viewed.
+The =format=, =forkto=, =forkfrom=, =header=, =footer= and =separator=
+aramaters provide the control necessary to make the history look nice
+when it is viewed. If you don't provide =forkto= or =forkfrom= then
+these history entries will be formatted using =format=.
 
-In this example the history is formatted as a table:
-   * Set WORKFLOWHISTORYFORMAT = $n| $state | $wikiusername | $date |
-The leading $n expands to a newline character that separates each line
-of the history.
+In this example the history is formatted as a simple table:
+<verbatim>
+%WORKFLOWHISTORY{format="| $state | $author | $date |" separator="$n"}%
+</verbatim>
 
-You could also format the history as a bullet list:
-   * Set WORKFLOWHISTORYFORMAT = $n   * $state -- $wikiusername, $date
 The standard [[format tokens]] are supported, as well as the following
 special tokens:
 | *Token* | *Expands to* |
-| =$user= | Who triggered the transition to this state |
-| =$state= | The target state of the transition |
-| =$day= =$dow= =$epoch= =$hours= =$isotz= =$minutes= =$mo= =$month= =$rcs= =$seconds= =$tz= =$wday= =$we= =$week= =$ye= =$year= | Components of the date of the transition |
-| =$email= =$http= | Alternative represenations of the full date |
-| =$rev= | Version at the transition |
-| =$comment | Comment accompanying the transition |
+| =$author= | Who triggered the transition to this state (also =$user= and =$wikiusername=) |
+| =$comment | Comment accompanying the record |
+| =$date= | Date/time of the transition in the default format (you can format your own date using =$day= =$dow= =$epoch= =$hours= =$isotz= =$minutes= =$mo= =$month= =$rcs= =$seconds= =$tz= =$wday= =$we= =$week= =$ye= =$year=) |
 | =$index= | 1-based number of this result |
+| =$name= | Version at the transition (also =$rev=) |
+| =$state= | The target state of the transition |
 
 ---++++ =%<nop>WORKFLOWLAST{...}%=
 Expands to the history recorded when the topic was last in a certain state.
 
 | *Parameter* | *Meaning* | *Default* |
 | ="State"= | Name of the state | |
-| =format= | Format | |
+| =format= | Format | =$rev: $state $author $date= |
 
-The format is the same as that used for =WORKFLOWHISTORY=.
+The =format= is the same as that used for =WORKFLOWHISTORY=.
 
 ---++++ =%<nop>WORKFLOWSTATE%=
-Expands to the current state of the document. It can also be given a
-=topic= parameter (default), in which case the state of that topic is
-returned.
+Expands to the current state of the topic.
 
 ---++++ =%<nop>WORKFLOWSTATEMESSAGE%=
-Expands to the corresponding message in the state table.
+Expands to the corresponding message in the state table for the current state.
 

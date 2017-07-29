@@ -7,9 +7,9 @@ tables.
 %TMPL:DEF{workflow:debug}%<!--%PARAM1%-->%TMPL:END%
 %TMPL:DEF{workflow:notransitions}%%MAKETEXT{"No available transitions in state '[_1]'" args="%PARAM1%"}%%TMPL:END%
 
-%TMPL:DEF{workflow:forkedto}%%MAKETEXT{"Forked to [_1] by [_2] at [_3]" args="%PARAM1%,%PARAM2%,%PARAM3%"}%%TMPL:END%
+%TMPL:DEF{workflow:forkedto}%%MAKETEXT{"Forked to [_1]" args="%PARAM1%"}%%TMPL:END%
 
-%TMPL:DEF{workflow:forkedfrom}%%MAKETEXT{"Forked from [[[_1]]] by [_2] at [_3]" args="%PARAM1%,%PARAM2%,%PARAM3%"}%%TMPL:END%
+%TMPL:DEF{workflow:forkedfrom}%%MAKETEXT{"Forked from [_1]" args="%PARAM1%"}%%TMPL:END%
 
 %TMPL:DEF{workflow:forkalreadyexists}%%MAKETEXT{"'[_1]' already exists" args="%PARAM1%"}%%TMPL:END%
 

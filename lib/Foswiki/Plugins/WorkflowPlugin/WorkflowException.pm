@@ -61,7 +61,7 @@ sub debug {
     if ( $always || $this->{object} && $this->{object}->{debug} ) {
 
         $str = Foswiki::Func::expandCommonVariables(
-            Foswiki::Plugins::WorkflowPlugin::_getString(
+            Foswiki::Plugins::WorkflowPlugin::getString(
                 $this->{def}, @{ $this->{params} }
             )
         );

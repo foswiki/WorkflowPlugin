@@ -99,7 +99,6 @@ sub test_changeState {
     $this->createNewFoswikiSession( 'WikiGuest', $query );
     try {
         ($text) = $this->capture( $UI_FN, $this->{session} );
-        print STDERR $text;
     }
     catch Foswiki::OopsException with {
         $this->assert_equals( 'workflow:wrongparams', $@->{def} );
@@ -254,12 +253,15 @@ TOPIC
     $query->param( 'topic',    $this->{test_web} . '.ForkHandles' );
     $this->createNewFoswikiSession( 'WikiGuest', $query );
     try {
-        my ( $t, $r, $o, $e ) = $this->capture( $UI_FN, $this->{session} );
-        print STDERR $e;
+        ($text) = $this->capture( $UI_FN, $this->{session} );
     }
     otherwise {
         $this->assert( 0, Data::Dumper->Dump( [shift] ) );
     };
+
+    $this->assert_matches( qr/^Status: 302\r?$/m, $text );
+    $this->assert_matches(
+        qr/^Location: .*\/view\/$this->{test_web}\/ForkHandles\r?$/m, $text );
 
     #print `cat $Foswiki::cfg{DataDir}/$this->{test_web}/ForkHandles.txt`;
 
@@ -270,8 +272,25 @@ TOPIC
     $this->assert_equals( 'TestForm', $meta->get('FORM')->{name} );
     $this->assert_equals( 'S3',       $meta->get('WORKFLOW')->{name} );
     $this->assert_equals(
-        "$this->{test_web}.CloneTopic1,$this->{test_web}.CloneTopic2",
-        $meta->get( 'WORKFLOWHISTORY', '2' )->{forkto} );
+        Foswiki::Plugins::WorkflowPlugin::getString(
+            'forkedto',
+            "$this->{test_web}.CloneTopic1, $this->{test_web}.CloneTopic2"
+        ),
+        $meta->get( 'WORKFLOWHISTORY', '2' )->{comment}
+    );
+
+    $controlledTopic =
+      Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
+        $this->{test_web}, 'CloneTopic1' );
+    $meta = $controlledTopic->{meta};
+    $this->assert_equals( 'TestForm', $meta->get('FORM')->{name} );
+    $this->assert_equals( 'S3',       $meta->get('WORKFLOW')->{name} );
+    $this->assert_equals(
+        Foswiki::Plugins::WorkflowPlugin::getString(
+            'forkedfrom', "$this->{test_web}.ForkHandles"
+        ),
+        $meta->get( 'WORKFLOWHISTORY', '1' )->{comment}
+    );
 }
 
 1;

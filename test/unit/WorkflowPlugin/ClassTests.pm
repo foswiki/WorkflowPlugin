@@ -301,11 +301,17 @@ TOPIC
         $forkedTopic->getCurrentStateName
     );
     $this->assert_equals(
-        "$this->{test_web}.ForkHandles",
-        $forkedTopic->{history}->{1}->{forkfrom}
+        Foswiki::Plugins::WorkflowPlugin::getString(
+            'forkedfrom', "$this->{test_web}.ForkHandles"
+        ),
+        $forkedTopic->{history}->{1}->{comment}
     );
-    $this->assert_equals( "$this->{test_web}.CloneTopic",
-        $controlledTopic->{history}->{2}->{forkto} );
+    $this->assert_equals(
+        Foswiki::Plugins::WorkflowPlugin::getString(
+            'forkedto', "$this->{test_web}.CloneTopic"
+        ),
+        $controlledTopic->{history}->{2}->{comment}
+    );
 }
 
 # Make sure fails are cleanly handled
@@ -320,14 +326,7 @@ sub test_ControlledTopic_badLoad {
     $this->assert( $e, "Expected it to fail" );
 
     #print STDERR Data::Dumper->Dump([$e]);
-    $this->assert_equals(
-        "Controlled topic $this->{test_web}.DoesNotExist could not be loaded",
-        Foswiki::Func::expandCommonVariables(
-            Foswiki::Plugins::WorkflowPlugin::_getString(
-                $e->{def}, @{ $e->{params} }
-            )
-        )
-    );
+    $this->assert_equals( "badct", $e->{def} );
 }
 
 sub test_accessControls1 {

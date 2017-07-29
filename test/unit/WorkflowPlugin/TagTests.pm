@@ -92,7 +92,7 @@ sub test_strings {
       )
     {
         $s =
-          Foswiki::Plugins::WorkflowPlugin::_getString( $def, 'p1', 'p2', 'p3',
+          Foswiki::Plugins::WorkflowPlugin::getString( $def, 'p1', 'p2', 'p3',
             'p4', 'p5', 'p6' );
         $this->assert( defined $s && $s ne '', $def );
     }
@@ -389,6 +389,39 @@ sub test_WORKFLOWLASTREV {
             $text, 'TestControlled', $this->{test_web}
         )
     );
+}
+
+sub test_WORKFLOWHISTORY {
+    my $this = shift;
+    Foswiki::Func::saveTopic( $this->{test_web}, 'TestHistory', undef, <<TOPIC);
+   * Set WORKFLOWDEBUG = 1
+%META:WORKFLOW{name="S3"}%
+%META:WORKFLOWHISTORY{name="1" state="S1" comment="Forked from Ffokcef" author="Author1" date="1498867200" }%
+%META:WORKFLOWHISTORY{name="2" state="S2" author="Author2" date="1499126400" }%
+%META:WORKFLOWHISTORY{name="3" state="S3" comment="Forked to Feckoff, Feckup" author="Author3" date="1498953600" }%
+%META:WORKFLOWHISTORY{name="4" state="S4" author="Author4" date="1499040000" }%
+%META:FORM{name="TestForm"}%
+%META:FIELD{name="Workflow" value="$this->{test_workflow}"}%
+TOPIC
+
+    my $text =
+'%WORKFLOWHISTORY{topic="TestHistory" header="HEAD" footer="FOOT" format="| $index | $state | $author ($wikiusername $user) | $name ($rev) | $epoch | $comment |" separator="$n" }%';
+    my $expect = <<RESULT;
+HEAD
+| 1 | S1 | Author1 (Author1 Author1) | 1 (1) | 1498867200 | Forked from Ffokcef |
+| 2 | S2 | Author2 (Author2 Author2) | 2 (2) | 1499126400 | ? |
+| 3 | S3 | Author3 (Author3 Author3) | 3 (3) | 1498953600 | Forked to Feckoff, Feckup |
+| 4 | S4 | Author4 (Author4 Author4) | 4 (4) | 1499040000 | ? |
+FOOT
+RESULT
+    chomp($expect);
+    $this->assert_equals(
+        $expect,
+        Foswiki::Func::expandCommonVariables(
+            $text, 'TestControlled', $this->{test_web}
+        )
+    );
+
 }
 
 1;

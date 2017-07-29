@@ -72,7 +72,8 @@ sub initPlugin {
     return 1;
 }
 
-sub _getString {
+# Get a string from the strings template
+sub getString {
     my $tmpl = shift;
     require Foswiki::Templates;
     $tmplCache ||= Foswiki::Func::loadTemplate('workflowstrings');
@@ -85,7 +86,7 @@ sub _getString {
 
 sub _oops {
     my $error = shift;
-    _getString();
+    getString();
     throw Foswiki::OopsException(
         'attention',
         def    => "workflow:$error->{def}",
@@ -120,54 +121,34 @@ sub _formatHistoryRecord {
 
     my $tmpl = '';
     my $auth = $hist->{author} // 'unknown';
-    my $date =
-      $hist->{date}
-      ? Foswiki::Func::formatTime( $hist->{date}, undef )
-      : 'unknown';
 
-    if ( $hist->{forkto} ) {
-        $tmpl = _getString('forkedto');
-        my $p = join( ', ', map { "[[$_]]" } split /\s*,\s*/, $hist->{forkto} );
-        $tmpl = s/%PARAM1%/$p/g;
-        $tmpl =~ s/%PARAM2%/$auth/g;
-        $tmpl =~ s/%PARAM3%/$date/g;
-    }
-    elsif ( $hist->{forkfrom} ) {
-        $tmpl = _getString('forkedfrom');
-        $tmpl =~ s/%PARAM1%/$hist->{forkfrom}/g;
-        $tmpl =~ s/%PARAM2%/$auth/g;
-        $tmpl =~ s/%PARAM3%/$date/g;
-    }
-    elsif ( !$hist->{name} || $hist->{name} < 0 ) {
+    if ( !$hist->{name} || $hist->{name} < 0 ) {
 
         # Legacy
         $tmpl = $hist->{value} // '';
     }
     else {
-
-        sub _expand {
-            my ( $record, $token ) = @_;
-            return '?' unless defined $record && defined $record->{$token};
-            return $record->{$token};
-        }
         $tmpl = $fmt;
-
-        # Map compatibility equivalence names
-        $tmpl =~ s/\$(wikiusername|user)/\$author/g;
-        $tmpl =~ s/\$user/\$author/g;
-        $tmpl =~ s/\$version/\$name/g;
-        $tmpl =~ s/\$rev/\$name/g;
-        $tmpl =~ s/\$index/$index/g;
-        $tmpl =~ s/\$time/\$http/g;
-        $tmpl =~ s/\$date/\$http/g;
-
-        # Expand time features
-        $tmpl = Foswiki::Func::formatTime( $hist->{date} // 0, $tmpl );
-
-        # Expand history fields
-        $tmpl =~ s/\$(\w+)/_expand($hist, $1)/ge;
-        $tmpl = Foswiki::Func::decodeFormatTokens($tmpl);
     }
+
+    sub _expand {
+        my ( $record, $token ) = @_;
+        return '?' unless defined $record && defined $record->{$token};
+        return $record->{$token};
+    }
+
+    # Map compatibility equivalence names
+    $tmpl =~ s/\$(wikiusername|user)/\$author/g;
+    $tmpl =~ s/\$version/\$name/g;
+    $tmpl =~ s/\$rev/\$name/g;
+    $tmpl =~ s/\$index/$index/g;
+    $tmpl =~ s/\$date/\$http/g;
+
+    # Expand time features
+    $tmpl = Foswiki::Func::formatTime( $hist->{date} // 0, $tmpl );
+
+    # Expand history fields
+    $tmpl =~ s/\$(\w+)/_expand($hist, $1)/ge;
 
     #print STDERR Data::Dumper->Dump([$hist, $fmt, $tmpl]);
 
@@ -218,11 +199,11 @@ sub _WORKFLOWEDITTOPIC {
           unless $controlledTopic->canEdit();
 
         $tag =
-          _getString( 'editbutton',
+          getString( 'editbutton',
             Foswiki::Func::getScriptUrl( $web, $topic, 'edit', t => time() ) );
     }
     catch WorkflowException with {
-        $tag = _getString('strikeedit') . _getString( 'debug', shift->debug() );
+        $tag = getString('strikeedit') . getString( 'debug', shift->debug() );
     };
     return $tag;
 }
@@ -245,13 +226,12 @@ sub _WORKFLOWATTACHTOPIC {
             "$web.$topic" )
           unless $controlledTopic->canEdit();
 
-        $tag = _getString( 'attachbutton',
+        $tag = getString( 'attachbutton',
             Foswiki::Func::getScriptUrl( $web, $topic, 'attach', t => time() )
         );
     }
     catch WorkflowException with {
-        $tag =
-          _getString('strikeattach') . _getString( 'debug', shift->debug() );
+        $tag = getString('strikeattach') . getString( 'debug', shift->debug() );
     };
     return $tag;
 }
@@ -269,32 +249,44 @@ sub _WORKFLOWHISTORY {
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic, $rev );
 
-        my $header    = $params->{header}    || '';
-        my $footer    = $params->{footer}    || '';
-        my $separator = $params->{separator} || '';
-        my $fmt =
-          $params->{format}
-          // Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT")
-          // '<br>$state -- $date';
+        my @results = ();
+        push( @results, $params->{header} )
+          if defined $params->{header};
+
+        my $separator = $params->{separator};
+
+        my $fmt = $params->{format}
+
+          # deprecated, compatibility
+          // Foswiki::Func::getPreferencesValue("WORKFLOWHISTORYFORMAT");
+
+        unless ( defined $fmt ) {
+            $fmt = '$state -- $date';
+            $separator //= '<br />';
+        }
+        $separator = Foswiki::Func::decodeFormatTokens( $separator // '' );
 
         $fmt =~ s/\$count/\$index/g;
 
         my $include = $params->{include};
         my $exclude = $params->{exclude};
 
-        my @results = ();
-        my $index   = 1;
+        my $index = 1;
         foreach
           my $rev ( sort { $a <=> $b } keys %{ $controlledTopic->{history} } )
         {
             my $hist = $controlledTopic->{history}->{$rev};
             next if $include && $hist->{state} !~ /$include/;
             next if $exclude && $hist->{state} =~ /$exclude/;
-
-            push( @results, _formatHistoryRecord( $hist, $fmt, $index++ ) );
+            my $text = _formatHistoryRecord( $hist, $fmt, $index++ );
+            push( @results, $text ) if defined $text;
         }
 
-        $result = $header . join( $separator, @results ) . $footer;
+        push( @results, $params->{footer} )
+          if defined $params->{footer};
+
+        $result = join( $separator // '', @results );
+        $result = Foswiki::Func::decodeFormatTokens($result);
     }
     catch WorkflowException with {
         shift->warn();
@@ -326,22 +318,22 @@ sub _WORKFLOWTRANSITION {
 
         if ( scalar(@actions) ) {
             $form =
-              _getString( 'txformhead', $controlledTopic->getCurrentStateName(),
+              getString( 'txformhead', $controlledTopic->getCurrentStateName(),
                 $web, $topic );
 
             if ( scalar(@actions) == 1 ) {
-                $form .= _getString( 'txformone', $actions[0] );
+                $form .= getString( 'txformone', $actions[0] );
             }
             else {
                 my $acts =
-                  join( '', map { _getString( 'txformeach', $_ ) } @actions );
-                $form .= _getString( 'txformmany', $acts );
+                  join( '', map { getString( 'txformeach', $_ ) } @actions );
+                $form .= getString( 'txformmany', $acts );
             }
 
-            $form .= _getString('txformfoot');
+            $form .= getString('txformfoot');
         }
         else {
-            $form .= _getString('txformnone');
+            $form .= getString('txformnone');
         }
     }
     catch WorkflowException with {
@@ -440,14 +432,14 @@ sub _WORKFLOWFORK {
 
             my $errors = '';
             if ( !Foswiki::Func::topicExists( $web, $topic ) ) {
-                $errors .= _getString( 'badct', "$web.$topic" );
+                $errors .= getString( 'badct', "$web.$topic" );
             }
 
             foreach my $newname ( split( ',', $newnames ) ) {
                 my ( $w, $t ) =
                   Foswiki::Func::normalizeWebTopicName( $web, $newname );
                 if ( Foswiki::Func::topicExists( $w, $t ) ) {
-                    $errors .= _getString( 'forkalreadyexists', "$w.$t" );
+                    $errors .= getString( 'forkalreadyexists', "$w.$t" );
                 }
             }
 
@@ -456,12 +448,12 @@ sub _WORKFLOWFORK {
             }
             else {
                 my $label = $attributes->{label} || 'Fork';
-                $result = _getString( 'txforkbutton',
+                $result = getString( 'txforkbutton',
                     "$web.$topic", $newnames, $lockdown, $label );
             }
         }
         else {
-            $result = _getString( 'wrongparams', 'WORKFLOWFORK' );
+            $result = getString( 'wrongparams', 'WORKFLOWFORK' );
         }
     }
     catch WorkflowException with {
@@ -481,7 +473,7 @@ sub _WORKFLOWLAST {
     my $state = $attr->{_DEFAULT};
     undef $attr->{_DEFAULT};
 
-    return _getString( 'wrongparams', 'WORKFLOWLAST' )
+    return getString( 'wrongparams', 'WORKFLOWLAST' )
       unless $state;
 
     try {
@@ -494,9 +486,10 @@ sub _WORKFLOWLAST {
         if ($record) {
             my $format = $attr->{format} || '$rev: $state $author $date';
             $result = _formatHistoryRecord( $record, $format );
+            $result = Foswiki::Func::decodeFormatTokens($result);
         }
         else {
-            $result = _getString( 'neverinstate', "$web.$topic", $state );
+            $result = getString( 'neverinstate', "$web.$topic", $state );
         }
     }
     catch WorkflowException with {
@@ -508,7 +501,7 @@ sub _WORKFLOWLAST {
 # Deprecated
 sub _WORKFLOWLASTREV {
     my ( $session, $attr, $topic, $web ) = @_;
-    return _getString( 'wrongparams', 'WORKFLOWLASTREV' )
+    return getString( 'wrongparams', 'WORKFLOWLASTREV' )
       unless $attr->{_DEFAULT};
     $attr->{format} = '$rev';
     return _WORKFLOWLAST( $session, $attr, $topic, $web );
@@ -517,7 +510,7 @@ sub _WORKFLOWLASTREV {
 # Deprecated
 sub _WORKFLOWLASTTIME {
     my ( $session, $attr, $topic, $web ) = @_;
-    return _getString( 'wrongparams', 'WORKFLOWLASTTIME' )
+    return getString( 'wrongparams', 'WORKFLOWLASTTIME' )
       unless $attr->{_DEFAULT};
     $attr->{format} = '$day $month $year - $hours:$minutes';
     return _WORKFLOWLAST( $session, $attr, $topic, $web );
@@ -526,7 +519,7 @@ sub _WORKFLOWLASTTIME {
 # Deprecated
 sub _WORKFLOWLASTUSER {
     my ( $session, $attr, $topic, $web ) = @_;
-    return _getString( 'wrongparams', 'WORKFLOWLASTUSER' )
+    return getString( 'wrongparams', 'WORKFLOWLASTUSER' )
       unless $attr->{_DEFAULT};
     $attr->{format} = '$author';
     return _WORKFLOWLAST( $session, $attr, $topic, $web );
@@ -537,13 +530,13 @@ sub _WORKFLOWLASTVERSION {
     my $result;
 
     my $state = $attr->{_DEFAULT};
-    return _getString( 'wrongparams', 'WORKFLOWLASTVERSION' )
+    return getString( 'wrongparams', 'WORKFLOWLASTVERSION' )
       unless $state;
     undef $attr->{_DEFAULT};
 
     try {
         ( $web, $topic, my $rev ) = _getTopicParams( $attr, $web, $topic );
-        $result = _getString( 'lastversion', $web, $topic, $state );
+        $result = getString( 'lastversion', $web, $topic, $state );
     }
     catch WorkflowException with {
         $result = shift->debug();
@@ -667,6 +660,11 @@ sub _restFork {
         my $lockdown = $query->param('lockdown');
 
         $controlledTopic->fork( \@forks, $lockdown );
+
+        my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
+        $url = $session->redirectto($url);
+
+        Foswiki::Func::redirectCgiQuery( undef, $url );
     }
     catch WorkflowException with {
 
@@ -711,7 +709,7 @@ sub beforeEditHandler {
                 topic  => $_[1],
                 params => [
                     'Edit',
-                    _getString(
+                    getString(
                         'cantedit',
                         Foswiki::Func::getWikiName()
                           . $controlledTopic->{workflow}->{name}
@@ -749,7 +747,7 @@ sub beforeAttachmentSaveHandler {
                 topic  => $_[1],
                 params => [
                     'Attach',
-                    _getString(
+                    getString(
                         'cantedit',
                         Foswiki::Func::getWikiName()
                           . $controlledTopic->{workflow}->{name}

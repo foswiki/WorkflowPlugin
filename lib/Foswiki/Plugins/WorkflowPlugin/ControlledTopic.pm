@@ -909,10 +909,12 @@ sub fork {
 
         $new->_addHistory(
             1,
-            author   => $who,
-            date     => time(),
-            state    => $this->getCurrentStateName(),
-            forkfrom => "$this->{web}.$this->{topic}",
+            author  => $who,
+            date    => time(),
+            state   => $this->getCurrentStateName(),
+            comment => Foswiki::Plugins::WorkflowPlugin::getString(
+                'forkedfrom', "$this->{web}.$this->{topic}"
+            ),
 
             # Since there will be a save of the forked topic with
             # 'forcenewrevision' to record the fork information, it's safe
@@ -932,9 +934,12 @@ sub fork {
     # Record the fork in the source topic, and optionally lock it down
     $this->_addHistory(
         $forkedRev,
-        author => $who,
-        date   => time,
-        forkto => join( ',', map { "$_->{web}.$_->{topic}" } @$forks )
+        author  => $who,
+        date    => time,
+        state   => $this->getCurrentStateName(),
+        comment => Foswiki::Plugins::WorkflowPlugin::getString(
+            'forkedto', join( ', ', map { "$_->{web}.$_->{topic}" } @$forks )
+        )
     );
 
     $this->save($lockdown);
