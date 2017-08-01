@@ -1,6 +1,7 @@
 This is an example workflow description used with the %SYSTEMWEB%.WorkflowPlugin.
 
-See ControlledDocument for a document controlled by this workflow.
+You can use the button on the WebHome page to create a new topic
+controlled by this workflow that you can experiment with.
 
 Any topic using this workflow can use settings from this topic that start
 with =WORKFLOW= - for example,
@@ -41,7 +42,7 @@ The second table describes the transitions available from each state.
 
 | *State*        | *Action*       | *Next State*  | *Allowed*      | *Form*       |
 | UNDERREVISION  | needs approval | PLEASEAPPROVE | not(WikiGuest) | ApproveForm  |
-| APPROVED       | revise         | UNDERREVISION | not(LASTUSER_UNDERREVISION) | RevisionForm |
+| APPROVED       | revise         | UNDERREVISION | not(LASTUSER_UNDERREVISION),not(WikiGuest) | RevisionForm |
 | PLEASEAPPROVE  | approve        | APPROVED      | QualityGroup   |              |
 | PLEASEAPPROVE  | reject         | UNDERREVISION | QualityGroup   | RevisionForm |
 

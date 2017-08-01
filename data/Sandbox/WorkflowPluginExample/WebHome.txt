@@ -1,10 +1,9 @@
 This web contains a working example of the %SYSTEMWEB%.WorkflowPlugin
 
    * DocumentApprovalWorkflow contains the workflow
-   * ControlledDocument is an example document
+If you are logged in. you can create a new document (based on ControlledDocument) that you can use with the workflow.
 
-<form action="%SCRIPTURLPATH{edit}%/%WEB%/ControlledDocumentAUTOINC000">
-You can create a new document (based on ControlledDocument) that you can use with the workflow here:
+<form method='post' action="%SCRIPTURLPATH{edit}%/%WEB%/ControlledDocumentAUTOINC000">
 <input type="hidden" name="templatetopic" value="ControlledDocument"/>
-<input type="submit" value="Create new controlled document" />
+<input type="submit" class="foswikiButton foswikiSubmit" value="Create new controlled document" />
 </form>

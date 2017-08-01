@@ -4,8 +4,11 @@ multiline definitions to absorb whitespace so they can be used in Foswiki
 tables.
 }#
 
-%TMPL:DEF{workflow:debug}%<!--%PARAM1%-->%TMPL:END%
+%TMPL:DEF{workflow:alert}%<span class="foswikiAlert">%PARAM1%</span>%TMPL:END%
+%TMPL:DEF{workflow:debug}%<!--<noautolink>%PARAM1%</noautolink>-->%TMPL:END%
 %TMPL:DEF{workflow:notransitions}%%MAKETEXT{"No available transitions in state '[_1]'" args="%PARAM1%"}%%TMPL:END%
+
+%TMPL:DEF{workflow:cannotfork}%%MAKETEXT{"Cannot fork, no CHANGE access to %PARAM1%"}%%TMPL:END%
 
 %TMPL:DEF{workflow:forkedto}%%MAKETEXT{"Forked to [_1]" args="%PARAM1%"}%%TMPL:END%
 
@@ -24,7 +27,7 @@ tables.
 
 %TMPL:DEF{workflow:nosuchtx}%%MAKETEXT{"Workflow '[_1]' does not permit '[_2]' to use transition '[_3]' from state '[_4]'" args="%PARAM1%,%PARAM2%,%PARAM3%,%PARAM4%"}%%TMPL:END%
 
-%TMPL:DEF{workflow:cantedit}%%MAKETEXT{"Workflow does not permit [_1] to modify [_2]" args="%PARAM1%,%PARAM2%"}%%TMPL:END%
+%TMPL:DEF{workflow:cantedit}%%MAKETEXT{"Workflow [_1] does not permit modification of [_2]" args="%PARAM1%,%PARAM2%"}%%TMPL:END%
 
 %TMPL:DEF{workflow:neverinstate}%%MAKETEXT{"[_1] has never been in state '[_2]'" args="%PARAM1%,%PARAM2%"}%%TMPL:END%
 
@@ -65,24 +68,24 @@ tables.
 
 %TMPL:DEF{workflow:txformone}%#{
 }#<input type="hidden" name='WORKFLOWACTION' value="%PARAM1%" />#{
-}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" name="%PARAM1%" value="%PARAM1%" /> %TMPL:END%
+}#<input type="submit" class="%IF{"defined WORKFLOWTRANSITIONCSSCLASS" else="foswikiChangeFormButton foswikiSubmit" then="%WORKFLOWTRANSITIONCSSCLASS%"}%" name="%PARAM1%" value="%PARAM1%" /> %TMPL:END%
 
 %TMPL:DEF{workflow:txformmany}%<select name="WORKFLOWACTION">#{
 }#%PARAM1%#{
 }#</select>#{
-}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%MAKETEXT{"Change status"}%" />%TMPL:END%
+}#<input type="submit" class="%IF{"defined WORKFLOWTRANSITIONCSSCLASS=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%MAKETEXT{"Change status"}%" />%TMPL:END%
 
 %TMPL:DEF{workflow:txformeach}% <option>%PARAM1%</option> %TMPL:END%
 
 %TMPL:DEF{workflow:txformnone}%%MAKETEXT{"No transitions available"}%%TMPL:END%
+
 #{ Button to trigger a fork }#
 %TMPL:DEF{workflow:txforkbutton}%#{
 }#<form name="forkWorkflow" action="%SCRIPTURL{"rest"}%/WorkflowPlugin/fork" method="POST">#{
 }#<input type="hidden" name="topic" value="%PARAM1%" />#{
 }#<input type="hidden" name="newnames" value="%PARAM2%" />#{
 }#<input type="hidden" name="lockdown" value="%PARAM3%" />#{
-}#<input type="hidden" name="endPoint" value="%PARAM1%" />#{
-}#<input type="submit" class="%IF{"'%WORKFLOWTRANSITIONCSSCLASS%'=''" then="foswikiChangeFormButton foswikiSubmit" else="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%IF{"'%PARAM4%'='Fork'" then="%MAKETEXT{"Fork"}%" else="%PARAM4%"}%"}%#{
+}#<input type="submit" name="fork" class="%IF{"defined WORKFLOWTRANSITIONCSSCLASS" else="foswikiChangeFormButton foswikiSubmit" then="%WORKFLOWTRANSITIONCSSCLASS%"}%" value="%IF{"'%PARAM4%'='Fork'" then="%MAKETEXT{"Fork"}%" else="%PARAM4%"}%">#{
 }#</form> %TMPL:END%
 
 #{ Email sent on a transition }#
@@ -97,4 +100,6 @@ Content-Type: text/plain
 %%PARAM4% has moved %PARAM2% to %PARAM3%
 %TMPL:END%
 
-1
+%TMPL:DEF{workflow:forked}%
+%MAKETEXT{"[_1] forked to [_2]" args="%WEB%.%TOPIC%,%PARAM1%"}%
+%TMPL:END%

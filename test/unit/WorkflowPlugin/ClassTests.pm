@@ -11,6 +11,7 @@ use Foswiki::Plugins::WorkflowPlugin;
 use Foswiki::Plugins::WorkflowPlugin::Workflow;
 use Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 use Foswiki::Plugins::WorkflowPlugin::WorkflowException;
+use Error qw(:try);
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -34,17 +35,21 @@ sub set_up {
 | S3      | %META{"formfield" name="F2"}% | not($user)        | S3 message |
 | S4      | %META{"formfield" name="F1"}% | %META{"formfield" name="F2"}% | S3 message |
 
-| *State*  | *Action* | *Next State*  | *Allowed* | *Form*        |
-| S1       | toS2     | S2            | nobody    |               |
-| S1       | toS3     | S3            |           | TestForm      |
-| S2       | to S3    | S3            | $user     | TestForm      |
-| S3       | to S1    | S1            |  %META{"formfield" name="F1"}% | |   
-| S4       | to S2    | S2            |  %META{"formfield" name="F2"}% | |   
+| *State*  | *Action* | *Next State*  | *Allowed* | *Form*        | *Notify* |
+| S1       | toS2     | S2            | nobody    |               | |
+| S1       | toS3     | S3            |           | TestForm      | |
+| S2       | to S3    | S3            | $user     | TestForm      | |
+| S3       | to S1    | S1            |  %META{"formfield" name="F1"}% | | jack\@craggyisland.ie |
+| S4       | to S2    | S2            |  %META{"formfield" name="F2"}% | | |
 
    * Set WORKFLOWDEBUG = 1
 FORM
 
-    Foswiki::Func::saveTopic( $this->{test_web}, 'TestControlled', undef,
+#Foswiki::Func::saveTopic( $this->{test_web}, 'WorkflowTransitionMailTemplate', undef, "Template check");
+
+    Foswiki::Func::saveTopic(
+        $this->{test_web}, 'TestControlled', undef,
+
         <<TOPIC);
 %META:WORKFLOW{name="S3"}%
 %META:WORKFLOWHISTORY{name="1" state="S1" author="Author1" date="1498867200" }%
@@ -56,6 +61,9 @@ FORM
 %META:FIELD{name="F1" value="$user"}%
 %META:FIELD{name="F2" value="FatherTed"}%
 TOPIC
+
+    $Foswiki::cfg{EnableEmail} = 1;
+    $this->{session}->net->setMailHandler( \&FoswikiFnTestCase::sentMail );
 }
 
 sub tear_down {
@@ -117,7 +125,8 @@ sub test_ControlledTopic {
                 'form'      => '',
                 'nextstate' => 'S1',
                 'state'     => 'S3',
-                'action'    => 'to S1'
+                'action'    => 'to S1',
+                'notify'    => 'jack@craggyisland.ie'
             }
         ],
         \@tx
@@ -128,6 +137,7 @@ sub test_ControlledTopic {
             'form'      => '',
             'nextstate' => 'S1',
             'state'     => 'S3',
+            'notify'    => 'jack@craggyisland.ie',
             'action'    => 'to S1'
         },
         $controlledTopic->getTransition('to S1')
@@ -239,10 +249,21 @@ sub test_ControlledTopic_changeState {
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
         $this->{test_web}, 'TestControlled' );
     $hr = $controlledTopic->getLast("S3");
+
     $this->assert_equals( 3,    $hr->{name} );
     $this->assert_equals( "S3", $hr->{state} );
     $this->assert( time - $hr->{date} < 10000, $hr->{date} );
     $this->assert_equals( "golem", $hr->{comment} );
+
+    $this->assert_num_equals( 1, scalar(@FoswikiFnTestCase::mails) );
+
+    foreach my $mail (@FoswikiFnTestCase::mails) {
+        $this->assert_equals(
+            "$this->{test_web}.TestControlled - transitioned to S1",
+            $mail->header('Subject') );
+        $this->assert_equals( 'jack@craggyisland.ie', $mail->header('To') );
+    }
+    @FoswikiFnTestCase::mails = ();
 
 }
 
@@ -270,8 +291,17 @@ TOPIC
         [
             {
                 web   => $this->{test_web},
-                topic => 'CloneTopic'
+                topic => 'CloneTopicAUTOINC0'
+            },
+            {
+                web   => $this->{test_web},
+                topic => 'CloneTopicAUTOINC0'
+            },
+            {
+                web   => $this->{test_web},
+                topic => 'CloneTopic999'
             }
+
         ]
     );
 
@@ -287,31 +317,35 @@ TOPIC
     $this->assert_equals( $this->{test_workflow},
         $controlledTopic->{meta}->get( "FIELD", "Workflow" )->{value} );
 
-    my $forkedTopic =
-      Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
-        $this->{test_web}, 'CloneTopic' );
-
-    $this->assert_equals( $this->{test_workflow},
-        $forkedTopic->{meta}->get( "FIELD", "Workflow" )->{value} );
-
-    #print Data::Dumper->Dump([$forkedTopic->{history}],['new']);
-
-    $this->assert_equals(
-        $controlledTopic->getCurrentStateName,
-        $forkedTopic->getCurrentStateName
-    );
     $this->assert_equals(
         Foswiki::Plugins::WorkflowPlugin::getString(
-            'forkedfrom', "$this->{test_web}.ForkHandles"
-        ),
-        $forkedTopic->{history}->{1}->{comment}
-    );
-    $this->assert_equals(
-        Foswiki::Plugins::WorkflowPlugin::getString(
-            'forkedto', "$this->{test_web}.CloneTopic"
+            'forkedto',
+"$this->{test_web}.CloneTopic0, $this->{test_web}.CloneTopic1, $this->{test_web}.CloneTopic999"
         ),
         $controlledTopic->{history}->{2}->{comment}
     );
+
+    foreach my $ft ( 0, 1, 999 ) {
+        my $forkedTopic =
+          Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
+            $this->{test_web}, "CloneTopic$ft" );
+
+        $this->assert_equals( $this->{test_workflow},
+            $forkedTopic->{meta}->get( "FIELD", "Workflow" )->{value} );
+
+        #print Data::Dumper->Dump([$forkedTopic->{history}],['new']);
+
+        $this->assert_equals(
+            $controlledTopic->getCurrentStateName,
+            $forkedTopic->getCurrentStateName
+        );
+        $this->assert_equals(
+            Foswiki::Plugins::WorkflowPlugin::getString(
+                'forkedfrom', "$this->{test_web}.ForkHandles"
+            ),
+            $forkedTopic->{history}->{1}->{comment}
+        );
+    }
 }
 
 # Make sure fails are cleanly handled

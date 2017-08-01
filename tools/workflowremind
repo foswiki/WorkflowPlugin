@@ -2,7 +2,7 @@
 #
 # Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 #
-# Copyright (C) 2016 Crawford Currie http://c-dot.co.uk
+# Copyright (C) 2016-2017 Crawford Currie http://c-dot.co.uk
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -32,7 +32,8 @@
 
 use strict;
 
-use File::Spec;
+use Getopt::Long ();
+use Pod::Usage   ();
 
 BEGIN {
     my ( $volume, $binDir, $action ) = File::Spec->splitpath(__FILE__);
@@ -44,56 +45,148 @@ BEGIN {
 
 use Foswiki::Plugins::WorkflowPlugin::Mither ();
 
-my $usage = <<END;
-$0 [-topic <topics>] -workflow <wfn> (-state <spec>)*
-
--topic is a wildcard specification of the webs/topics to process.
-\t-topic *.* will process all webs and topics
-\t-topic *.Doc* will process all topics starting with Doc in all webs
-\t-topic Documentation.Doc1234 will process a single topic
--workflow specifies the workflow name (no web specifier)
--state specifies a state to look for and the maximum number of days the topic is allowed to remain in that state before a reminder is sent. For example,
-\t-state FORFIRSTAPPROVAL=10 -state FORSECONDAPPROVAL=2
-will allow topics in FORFIRSTAPPROVAL to remain there for 10 days before complaining. Topics in FORSECONDAPPROVAL only get 2 days.
-
-The list of mail recipients is calculated in the context of the transitioned topic. If any fields used to build the list have changed since it was first transitioned have changed, that might result in a different list of people being notified than were initially told of the transition.
-END
-
 # Need list of states that need to be notified, and max time in that state
-my %options = (
-    topics => "*.*",    # all webs, all topics
-    states => {}        # no states, so nothing to do
-);
+my @states;        # no states, so nothing to do
+my $workflow;
+my @topic;
+my %options;
+my $debug;
 
-# Called from the command line
-while ( scalar @ARGV ) {
-    my $arg = shift @ARGV;
-
-    if ( $arg eq '-topic' ) {
-        $options{topics} = shift @ARGV;
+sub parseDuration {
+    my $s = shift;
+    my $d = 0;
+    
+    $s =~ s/([0-9]+)y/$d += $1 * 31556925;''/gei;    # tropical year
+    $s =~ s/([0-9]+)m/$d += $1 * 2592000; ''/ge;     # 1m = 30 days
+    $s =~ s/([0-9]+)w/$d += $1 * 604800;  ''/gei;    # 1w = 7 days
+    $s =~ s/([0-9]+)d/$d += $1 * 86400;   ''/gei;    # 1d = 24 hours
+    $s =~ s/([0-9]+)h/$d += $1 * 3600;    ''/gei;    # 1 hour = 60 mins
+    $s =~ s/([0-9]+)M/$d += $1 * 60;      ''/ge;     # note: m != M
+    $s =~ s/([0-9]+)S/$d += $1 * 1;       ''/gei;
+    if ($s =~ /^[0-9]+$/) {
+        $d += 86400 * $s
     }
-    elsif ( $arg eq '-workflow' ) {
-        $options{workflow} = shift @ARGV;
-    }
-    elsif ( $arg eq '-state' ) {
-        my $spec = shift @ARGV;
-        my ( $state, $maxtime ) = split( "=", $spec, 2 );
-        $options{states}->{$state} = $maxtime;
-    }
+    return $d;
 }
 
-unless ( $options{workflow} ) {
-    print STDERR "No workflow specified, nothing to do\n";
-    print STDERR $usage;
+Getopt::Long::GetOptions(
+    'state=s'    => \@states,
+    'workflow=s' => \$workflow,
+    'topic=s'    => \@topic,
+    'dgetopt'    => \$debug, # DEBUG
+    'help'       => sub {
+        Pod::Usage::pod2usage(
+            -exitstatus => 0,
+            -verbose    => 2,
+            );
+    }
+    );
+
+push(@topic, @ARGV);
+
+my $ok = 1;
+
+if ( $workflow ) {
+    $options{workflow} = $workflow;
+} else {
+    print STDERR "No workflow specified, see --help for options\n";
+    $ok = 0;
+}
+
+if ( scalar @states ) {
+    %{$options{states}} = map {
+        if (/^(.*)=([0-9ymwdhMs]+)$/) {
+            ( $1 => parseDuration($2) )
+        } else {
+            ( $_ => parseDuration('7d') );
+        }
+    } @states;
+} else {
+    print STDERR "No states specified, see --help for options\n";
+    $ok = 0;
+}
+
+if (scalar @topic) {
+    push(@{$options{topic}}, @topic);
+} else {
+    push(@{$options{topic}}, '*.*');
+}
+
+unless ($ok) {
     exit 1;
 }
 
-unless ( scalar keys %{ $options{states} } > 0 ) {
-    print STDERR "No states specified, nothing to do\n";
-    print STDERR $usage;
-    exit 1;
-}
+# Debug
+if ($debug) {
+    require Data::Dumper;
+    print STDERR Data::Dumper->Dump([\%options]);
+} else {
+    # Always run as admin
+    my $session = new Foswiki( $Foswiki::cfg{AdminUserLogin} );
 
-Foswiki::Plugins::WorkflowPlugin::Mither::mither(%options);
+    # Assign SESSION so that Func methods work
+    $Foswiki::Plugins::SESSION = $session;
+
+    Foswiki::Plugins::WorkflowPlugin::Mither::mither(%options);
+}
 
 1;
+__END__
+
+=head1 tools/workflowremind [options]
+
+Remind about workflow topics that are stuck in a state
+
+=head1 SYNOPSIS
+
+perl -I bin tools/workflowremind [options] [topics...]
+
+topics specifies one or more wildcard specifications of the webs/topics
+to process. Default is all topics in all webs.
+
+C<*.*> will process all webs and topics
+
+C<*.Doc*> will process all topics starting with Doc in all webs
+
+C<Documentation.Doc1234> will process a single topic
+
+The list of mail recipients is calculated in the context of the latest revision
+of the topic. If any fields used to build the list have changed since it was first
+transitioned have changed, that might result in a different list of people being
+notified than were initially told of the transition.
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<--topic> topics
+
+An alternative way to specify topics.
+
+=item B<--workflow>>
+
+Specifies the workflow name (no web specifier)
+
+=item B<--state> statename=maxdays
+
+Specifies a state to look for and the maximum number of days the topic is
+allowed to remain in that state before a reminder is sent. For example,
+
+C<--state FORFIRSTAPPROVAL=10 -state FORSECONDAPPROVAL=2>
+
+will allow topics in FORFIRSTAPPROVAL to remain there for 10 days before
+complaining. Topics in FORSECONDAPPROVAL only get 2 days. If you don't
+specify a time it will default to 7 days.
+
+The default is days, but you can specify different time periods using
+trailing 'y', 'm', 'w', 'd', 'h', 'M' and 's', which can be combined.
+For example, C<1y2m1w2d1h3M2s> specifies 1 year (365 days), 2 months
+(60 days), 1 week (7 days) 2 days, 1 hour, 3 minutes and 2 seconds.
+
+=item B<--help>
+
+Print this information
+
+=back
+
+END

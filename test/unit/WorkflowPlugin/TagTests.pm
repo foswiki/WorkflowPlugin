@@ -129,7 +129,20 @@ sub test_WORKFLOWEDITTOPIC1 {
 
     #print STDERR "State S3\n";
     $this->assert_html_equals(
-"<strike>Edit</strike><!--Workflow does not permit WikiGuest to modify $this->{test_web}.TestControlled-->",
+        Foswiki::Func::expandCommonVariables(
+            Foswiki::Plugins::WorkflowPlugin::getString(
+                'strikeedit', $this->{test_workflow},
+                "$this->{test_web}.TestControlled"
+              )
+              . Foswiki::Plugins::WorkflowPlugin::getString(
+                'alert',
+                Foswiki::Plugins::WorkflowPlugin::getString(
+                    'cantedit',
+                    "$this->{test_web}.$this->{test_workflow}",
+                    "$this->{test_web}.TestControlled"
+                )
+              )
+        ),
         Foswiki::Func::expandCommonVariables(
             $text, 'TestControlled', $this->{test_web}
         )
@@ -167,7 +180,20 @@ sub test_WORKFLOWATTACHTOPIC1 {
 
     #print STDERR "State S3\n";
     $this->assert_html_equals(
-"<strike>Attach<\/strike><!--Workflow does not permit WikiGuest to modify $this->{test_web}.TestControlled-->",
+        Foswiki::Func::expandCommonVariables(
+            Foswiki::Plugins::WorkflowPlugin::getString(
+                'strikeattach', $this->{test_workflow},
+                "$this->{test_web}.TestControlled"
+              )
+              . Foswiki::Plugins::WorkflowPlugin::getString(
+                'alert',
+                Foswiki::Plugins::WorkflowPlugin::getString(
+                    'cantedit',
+                    "$this->{test_web}.$this->{test_workflow}",
+                    "$this->{test_web}.TestControlled"
+                )
+              )
+        ),
         Foswiki::Func::expandCommonVariables(
             $text, 'TestControlled', $this->{test_web}
         )
@@ -206,7 +232,7 @@ sub test_WORKFLOWTRANSITION {
 <input type="hidden" name="topic" value="%WEB%.TestControlled" />
 <input type="hidden" name="t" value="?" />
 <input type="hidden" name="WORKFLOWACTION" value="to S1" />
-<input type="submit" class="%WORKFLOWTRANSITIONCSSCLASS%" name="to S1" value="to S1" />
+<input type="submit" class="foswikiChangeFormButton foswikiSubmit" name="to S1" value="to S1" />
 </form>
 HERE
     my $actual =

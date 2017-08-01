@@ -11,6 +11,9 @@ This object represents a workflow definition.
 package Foswiki::Plugins::WorkflowPlugin::Workflow;
 
 use strict;
+
+use locale;    # required for international names
+
 use Error ':try';
 
 use Foswiki::Func           ();
@@ -158,7 +161,7 @@ sub getWorkflow {
 
 =begin TML
 
----++ ObjectMethod getTransitions($statename) -> \@transitions
+---++ ObjectMethod getTransitions($statename) -> @transitions
 
 Get all the transitions (transition table rows) from the given given state.
 

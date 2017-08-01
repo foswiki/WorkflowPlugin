@@ -198,7 +198,6 @@ sub test_changeState {
         $text
     );
     my %ps = map { /^(.*)=(.*)$/; $1 => $2 } split( /;/, $1 );
-    $this->assert_equals( 'toS3',         $ps{WORKFLOWINTRANSITION} );
     $this->assert_equals( '0',            $ps{breaklock} );
     $this->assert_equals( 'TestForm',     $ps{formtemplate} );
     $this->assert_equals( 'workflowedit', $ps{template} );
@@ -255,13 +254,16 @@ TOPIC
     try {
         ($text) = $this->capture( $UI_FN, $this->{session} );
     }
+    catch Foswiki::OopsException with {
+        my $e = shift;
+        $this->assert_equals( 'workflow:forked', $e->{def} );
+        $this->assert_equals(
+            "$this->{test_web}.CloneTopic1, $this->{test_web}.CloneTopic2",
+            $e->{params}->[0] );
+    }
     otherwise {
-        $this->assert( 0, Data::Dumper->Dump( [shift] ) );
+        $this->assert( 0, "UNKNOWN " . Data::Dumper->Dump( [shift] ) );
     };
-
-    $this->assert_matches( qr/^Status: 302\r?$/m, $text );
-    $this->assert_matches(
-        qr/^Location: .*\/view\/$this->{test_web}\/ForkHandles\r?$/m, $text );
 
     #print `cat $Foswiki::cfg{DataDir}/$this->{test_web}/ForkHandles.txt`;
 

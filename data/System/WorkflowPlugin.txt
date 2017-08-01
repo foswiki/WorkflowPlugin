@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" date="1501261498" format="1.1" version="1"}%
+%META:TOPICINFO{author="ProjectContributor" date="1501577690" format="1.1" version="1"}%
 %META:TOPICPARENT{name="ReferenceManual"}%
 ---+ %TOPIC%
 <!--
@@ -94,7 +94,7 @@ Each row in this table defines a transition from one state to another state:
    * an _optional_ *Form* column defines a form that is attached to
      the topic in this state.
    * an _optional_ *Notify* column specifies who should be notified when
-     this transition fires.
+     this transition fires. See [[#Transition_Notification][Transition Notification]] below for more information.
 
 In our example, anyone is allowed to revise the document when it is in
 =UNDERREVISION= state. After finishing the revision, the document can
@@ -117,10 +117,6 @@ be attached to the topic when the CTO transitions the topic into
    * if there is already a form of a different type attached to the topic, then any fields that have the same name in the _new_ form will be preserved.
    * If no form is given, the existing form (if any) is left in place.
 A typical usage of the form would be to collect additional information as the topic walks through the work flow, or to make information in the form unchangeable (by setting it to a =label= field) once a given state is reached.
-
-If a *Notify* column is given, that column can contain a
-comma-separated list of notification targets to be informed when the
-transition is fired.  See #TransitionNotification below for more information.
 
 Any [[%SYSTEMWEB%.PreferenceSettings][preference settings]] in the workflow
 description topic that start with =WORKFLOW= are automatically available
@@ -148,17 +144,9 @@ to the given state.
 ---+++ Notification Email Format
 
 By default, notification emails are formatted according to the
-=mailworkflowtransition= [[#SkinTemplates][skin template]]. All
-standard Foswiki macros in the templates are expanded, plus the
-following additional macros:
-| =EMAILTO= | Comma-separated list of email addressess |
-| =TRANSITION= | Name of the transition |
-| =TARGET_STATE= | State being transitioned to |
-
-For convenience, this default template can be overridden using the the
-=WORKFLOWDEFAULTEMAILTEMPLATE= preference in your workflow description
-topic, which should be set to the name of a topic. If this is not set,
-default [[SkinTemplates][skin template]] rules are followed.
+=mailworkflowtransition= [[#SkinTemplates][skin template]]. You can override
+this by providing a template topic called =WorkflowTransitionMailTemplate=
+in the web where the transitioning topic resides.
 
 In addition you can define custom email templates in the *Notify*
 column, using the syntax =template(!Web.MyTopic)=. This allows you to
@@ -175,6 +163,8 @@ Custom templates have the additional macro:
 
 *Note:* you can also re-notify a transition when the topic has been stuck for
 a certain length of time in a state. This is done using the =tools/workflowremind= script. This script is normally run from a cron job, and can be run without parameters to see how it works.
+
+%X% the =WORKFLOWDEFAULTEMAILTEMPLATE= preference is no longer supported. Please use local template topics and/or skin templates instead.
 
 ---+++ Settings in your controlled document/topic 
 
@@ -255,7 +245,13 @@ correctly.
 ---++ Stuck-At Reminders
 You may want to be able to issue a notification is a topic is stuck in a state for longer than a given time, to keep the workflow moving. For this the plugin provides the =tools/workflowremind= perl script, which is run on the server - either manually, or using a =cron= job. To find out how this is used, change to the =tools= directory on the server and =perl workflowremind= with no parameters.
 
-The mail sent by this script uses a special template, =templates/mailworkflowremind.tmpl=. You can override this by providing a template topic called =WorkflowRemindTemplate= in the web where the transitioned topic resides.
+The mail sent by this script is formatted using [[SkinTemplates][skin template]] called =mailworkflowremind=. You can override this by providing a template topic called =WorkflowRemindMailTemplate= in the web where the transitioned topic resides.
+
+The following identifiers are expanded in the template:
+| =EMAILTO= | Comma-separated list of email addressess |
+| =TRANSITION= | Name of the transition |
+| =TARGET_STATE= | State being transitioned to |
+| =STUCK= | How long the topic has been stuck in that state |
 
 ---++ Form Based Workflows
 Normally the workflow for a topic is defined in a Foswiki preference setting. You can also use a form field for this.
@@ -288,21 +284,21 @@ The plugin uses custom meta-data to contol and track workflows. Most users
 will never need to know about this; the following is for experts who want
 to understand the format of that metadata.
 
----+++ =WORKFLOW= - unique
+---+++ =META:WORKFLOW= - unique
    * =name= - current state of this topic
    * =LAST(TIME|USER|VERSION|COMMENT)= - deprecated, replaced with =WORKFLOWHISTORY=
 
----+++ =WORKFLOWHISTORY= - may be many
+---+++ =META:WORKFLOWHISTORY= - may be many
 All workflow history entries have the following fields:
    * =name= - revision identifier
    * =author= - who did the transition/fork
    * =date= - time the transition/fork happened (epoch secs)
-
+   
 State transitions are recorded as follows:
    * =state= - state transitioned into
    * =comment= - comment accompanying the transition
 
-Forks are recorded in both the forked topic, and th topic created by the fork.
+Forks are recorded in both the forked topic, and the topic created by the fork.
 
 In the topic that was forked from,
    * =forkto= - comma-separated list of web.topic generted by the fork
@@ -316,10 +312,10 @@ Developing complex workflows is quite straightforward, though from time-to-time
 you may require some additional debugging support. In this case you can enable
 the =WORKFLOWDEBUG= preference, either in the workflow description topic or in
 an individual controlled topic, to get extra information about the macros
-being expanded when a controlled topic is viewed.
-
-Enabling debug also enables messages about events to be output
-to the Foswiki debug log (requires administrator access).
+being expanded when a controlled topic is viewed. Information is embedded
+into the topic in HTML comments (use 'view source' in the browser to see them)
+and, if ={Plugins}{WorkflowPlugin}{Debug}= is enabled in configure, additional
+messages (mostly related to access control) are written to the debug log (requires administrator access).
 
 ---++ History and Acknowledgements
 
@@ -359,6 +355,6 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 %META:FIELD{name="Repository" attributes="" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
 %META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki.org/Support/WorkflowPlugin"}%
 %META:FIELD{name="Home" attributes="" title="Home" value="http://foswiki.org/Extensions/WorkflowPlugin"}%
-%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1501261498" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1501261498" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
-%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1501261498" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1501577690" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1501577690" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
+%META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1501577690" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%

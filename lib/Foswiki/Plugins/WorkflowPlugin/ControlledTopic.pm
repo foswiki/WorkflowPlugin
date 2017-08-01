@@ -13,12 +13,24 @@ that support the plugin.
 package Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 
 use strict;
+
+use locale;    # required for international names
+
 use Assert;
 use Error ':try';
 
 use Foswiki::Func ();
 use Foswiki::Plugins::WorkflowPlugin::Workflow;
 use Foswiki::Plugins::WorkflowPlugin::WorkflowException;
+
+# The plugin uses the temporary granting of change access to the
+# user who invokes a transition that requires a form edit. This grant
+# is removed by purgeTemporaryGrant, called from the beforeSaveHandler
+# of the plugin.
+
+# This boolean is used to suppress this purge for the case where the
+# grant if being set up.
+our $temporaryGrant = 0;
 
 =begin TML
 
@@ -220,6 +232,27 @@ sub getLast {
     return $best;
 }
 
+=begin TML
+
+---++ ObjectMethod getLastBefore($date) -> \%history
+
+Get the last history record stored from before the 
+given date.
+
+=cut
+
+sub getLastBefore {
+    my ( $this, $date ) = @_;
+
+    my $best;
+    foreach my $hist ( values %{ $this->{history} } ) {
+        next unless defined $hist->{date};
+        next if $hist->{date} >= $date;
+        $best = $hist if !$best || $best->{date} < $hist->{date};
+    }
+    return $best;
+}
+
 # Get all the workflow transitions available from the current state
 sub getTransitions {
     my ($this) = @_;
@@ -287,6 +320,7 @@ sub haveNextState {
 # list of allowed actors, or they are a member of a group in the list.
 #
 # $allowed is macro-expanded in the content of the current topic.
+#
 sub _checkAllowed {
     my ( $this, $allowlist, $action, $fwperm ) = @_;
     ASSERT( $this->{debug} );
@@ -321,7 +355,7 @@ sub _checkAllowed {
             if ( $entry =~ /^not\((.*)\)$/ ) {
                 $entry = $1;
                 if ( $entry =~ /^LASTUSER_(.+)$/ ) {
-                    $entry = $this->{workflow}->getLast($1);
+                    $entry = $this->getLast($1);
                     if ($entry) {
                         $entry = $entry->{author};
                         $entry =~ s/^.*\.//;    # strip web
@@ -343,6 +377,7 @@ sub _checkAllowed {
         # not() trumps everything else
         if ( scalar(@no) ) {
             foreach my $entry (@no) {
+                next unless defined $entry;
                 if ( $entry eq $thisUser
                     || Foswiki::Func::isGroup($entry)
                     && Foswiki::Func::isGroupMember( $entry, $thisUser, {} ) )
@@ -425,36 +460,21 @@ sub _addHistory {
 
 =begin TML
 
----++ ObjectMethod canEdit($ungrant) -> $boolean
+---++ ObjectMethod canEdit() -> $boolean
 
 Determine if workflow allows editing for the current user.
-   =$ungrant= - if there has been a temporary grant of change access, clear it
 
 =cut
 
 sub canEdit {
-    my ( $this, $ungrant ) = @_;
+    my ($this) = @_;
     my $state = $this->getCurrentState();
 
     #print STDERR "canEdit ".Data::Dumper->Dump([$state]);#detail
 
-    if ($ungrant) {
-        my $grant =
-          $this->{meta}->find( 'PREFERENCE', 'WORKFLOWTEMPORARYGRANT' );
-        if ($grant) {
-            my $c = $this->{meta}->find( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
-            if ( $c =~ s/,$grant$// ) {
-                $this->{meta}->put(
-                    'PREFERENCE',
-                    {
-                        name  => 'ALLOWTOPICHANGE',
-                        value => $c
-                    }
-                );
-            }
-            return 1;
-        }
-    }
+    my $grant = $this->{meta}->get( 'PREFERENCE', 'WORKFLOWTEMPORARYGRANT' );
+    $grant = $grant->{value} if $grant;
+    return 1 if $grant && $grant eq Foswiki::Func::getWikiName();
 
     return $this->_checkAllowed( $state->{allowchange}, 'allowchange',
         'CHANGE' );
@@ -561,13 +581,6 @@ sub changeState {
     my $newForm = $this->getTransition($action)->{form} // '';
     my $newState = $this->haveNextState($action);
 
-    # If there is a form with the new state, and it's not
-    # the same form as previously, we need to kick into edit
-    # mode to support form field changes. In this case the
-    # transition is delayed until after the edit is saved
-    # (the transition is executed by the beforeSaveHandler)
-    $newForm = ( $newForm && $newForm ne $oldForm ) ? $newForm : undef;
-
     unless ($breaklock) {
         my ( $url, $loginName, $t ) =
           Foswiki::Func::checkTopicEditLock( $this->{web}, $this->{topic} );
@@ -605,7 +618,18 @@ sub changeState {
 
     $this->{form} = $tx->{form};
 
+    # If there is a form with the new state, and it's not
+    # the same form as previously, we need to kick into edit
+    # mode to support form field changes. To support this, we
+    # have to temporarily grant edit permission to the caller.
+    $newForm = ( $newForm && $newForm ne $oldForm ) ? $newForm : undef;
+
+    # temporary grant of change permission if $newForm is not false
+    $temporaryGrant = $newForm;
+
     $this->save( 0, $newForm );
+
+    $temporaryGrant = 0;
 
     Foswiki::Func::writeDebug( __PACKAGE__
           . " $this->{web}.$this->{topic} transitioned to "
@@ -613,15 +637,33 @@ sub changeState {
           . Foswiki::Func::getWikiName() )
       if $this->{debug};
 
-    $this->_notify($tx);
+    $this->notifyTransition(
+        $tx,
+        default_template => 'mailworkflowtransition',
+        template         => 'WorkflowTransitionMail'
+    );
 
     return $newForm;
 }
 
-# Notify all interested parties that the given transition has just
-# been executed.
-sub _notify {
-    my ( $this, $tx ) = @_;
+=begin TML
+
+---++ ObjectMethod notifyTransition($transition [, %options])
+
+Send email to all interested parties that the given transition has just
+been executed.
+   * =$transition= - reference to a transition that must exist in
+     the workflow object for this controlled topic.
+   * =%options= can include:
+      * =default_template= - required to tell what temaplte to use
+      * =template= - alternative to the default_template
+      * any number of UPPERCASE tokens that will be expanded in
+        the mail template
+
+=cut
+
+sub notifyTransition {
+    my ( $this, $tx, %options ) = @_;
 
     # Expand vars in the notify list. This supports picking up the
     # value of the notifees from the topic itself.
@@ -681,47 +723,29 @@ sub _notify {
         }
     }
 
-    return unless scalar(@emails);
+    return unless scalar(@emails) || scalar(@templates);
 
     # Have a list of recipients
 
-    my $tofield = join( ',', @emails );
-
     # Set values for exapansion in the email templates
-    Foswiki::Func::setPreferencesValue( 'EMAILTO',      $tofield );
+    Foswiki::Func::setPreferencesValue( 'EMAILTO', join( ',', @emails ) );
     Foswiki::Func::setPreferencesValue( 'TARGET_STATE', $tx->{nextstate} );
     Foswiki::Func::setPreferencesValue( 'TRANSITION',   $tx->{name} );
 
+    while ( my ( $k, $v ) = each %options ) {
+        if ( $k =~ /^[A-Z]+$/ ) {
+            Foswiki::Func::setPreferencesValue( $k, $v );
+        }
+    }
+
+    my @mails;
+
     if ( scalar(@emails) ) {
 
-        # See if this workflow has a custom default email template defined
-        # in preferences
-        my $override =
-          $this->{workflow}->getPreference('WORKFLOWDEFAULTEMAILTEMPLATE');
-
-        my $tmpl;
-        if ($override) {
-            my ( $otweb, $ottopic ) =
-              Foswiki::Func::normalizeWebTopicName( $web, $override );
-            if ( Foswiki::Func::topicExists( $otweb, $ottopic ) ) {
-                ( undef, $tmpl ) = Foswiki::Func::readTopic( $otweb, $ottopic );
-            }
-            else {
-                Foswiki::Func::writeWarning( __PACKAGE__
-                      . " cannot find topic '$otweb.$ottopic'"
-                      . " - falling back to default email template" );
-            }
-        }
-
-        # Otherwise use the default template
-        $tmpl ||= Foswiki::Func::loadTemplate('mailworkflowtransition');
-
-        $tmpl = $this->expandMacros($tmpl);
-        my $errors = Foswiki::Func::sendEmail( $tmpl, 3 );
-        if ($errors) {
-            Foswiki::Func::writeWarning(
-                __PACKAGE__ . ' Failed to send transition mails: ' . $errors );
-        }
+        my $tmpl = Foswiki::Func::loadTemplate( $options{template} );
+        $tmpl = Foswiki::Func::loadTemplate( $options{default_template} )
+          unless $tmpl;
+        push( @mails, $this->expandMacros($tmpl) );
     }
 
     # See if this workflow has one or more custom email templates defined
@@ -730,30 +754,30 @@ sub _notify {
         foreach my $template (@templates) {
             Foswiki::Func::setPreferencesValue( 'TEMPLATE',
                 "$template->{web}.$template->{topic}" );
-            my $text = $this->expandMacros( $template->{text} );
-            my $errors = Foswiki::Func::sendEmail( $text, 3 );
-            if ($errors) {
-                Foswiki::Func::writeWarning( __PACKAGE__
-                      . ' Failed to send transition mails: '
-                      . $errors );
-            }
+            push( @mails, $this->expandMacros( $template->{text} ) );
+        }
+    }
+
+    foreach my $mail (@mails) {
+        my $errors = Foswiki::Func::sendEmail( $mail, 3 );
+        if ($errors) {
+            Foswiki::Func::writeWarning(
+                __PACKAGE__ . ' Failed to send transition mails: ' . $errors );
         }
     }
 }
 
 =begin TML
 
----++ ObjectMethod save($lockdown, $temporaryGrant)
+---++ ObjectMethod save($lockdown)
 
 Save the topic to the store.
    * =lockdown= can be used to lock the topic for changes after save.
-   * =$temporaryGrant= can be used to grant the current user CHANGE
-     access for the next edit only.
 
 =cut
 
 sub save {
-    my ( $this, $lockdown, $temporaryGrant ) = @_;
+    my ( $this, $lockdown ) = @_;
 
     # Move history into meta
     my $meta = $this->{meta};
@@ -812,7 +836,8 @@ sub save {
     }
 
     # Only add the temporary grant if the current user does *not*
-    # have change access after the transition
+    # have change access after the transition. This gives them
+    # once-only edit rights.
     if (
         $temporaryGrant
         && !Foswiki::Func::checkAccessPermission(
@@ -823,8 +848,8 @@ sub save {
       )
     {
 
-        my $c = $this->{meta}->find( 'PREFERENCE', 'ALLOWTOPICHANGE' ) // '';
-        $c .= ',' if $c;
+        my $c = $this->{meta}->get( 'PREFERENCE', 'ALLOWTOPICHANGE' );
+        $c = defined $c ? $c->{value} . ',' : '';
         $c .= Foswiki::Func::getWikiName();
         $this->{meta}->putKeyed(
             'PREFERENCE',
@@ -856,7 +881,44 @@ sub save {
 
 =begin TML
 
----++ ObjectMethod fork(\@forks [,$lockdown])
+---++ StaticMethod handleSave($meta)
+
+beforeSaveHandler - check if the temporaryGrant flag is set, and if not
+remove any temporary grant from the meta.
+
+=cut
+
+sub purgeTemporaryGrant {
+
+    return if $temporaryGrant;
+
+    my $meta = shift;
+    my $grant = $meta->get( 'PREFERENCE', 'WORKFLOWTEMPORARYGRANT' );
+    return unless $grant;
+    $grant = $grant->{value};
+    return unless $grant;
+
+    $meta->remove( 'PREFERENCE', 'WORKFLOWTEMPORARYGRANT' );
+    my $c = $meta->get( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
+    $c = join( ',', grep { !/^$grant$/ } split( /(\s*,\s*)+/, $c->{value} ) )
+      if $c;
+    if ($c) {
+        $meta->put(
+            'PREFERENCE',
+            {
+                name  => 'ALLOWTOPICHANGE',
+                value => $c
+            }
+        );
+    }
+    else {
+        $meta->remove( 'PREFERENCE', 'ALLOWTOPICCHANGE' );
+    }
+}
+
+=begin TML
+
+---++ ObjectMethod fork(\@forks [,$lockdown]) -> $string
 
 Create a series of new topics that are clones of this topic, except that
 the history of the copied topic is not carried over. Topics being cloned
@@ -866,20 +928,63 @@ to must not exist.
    * =$lockdown= - if true, will lock down this topic for changes after
      the cloning is complete
 
+If any of the clone topic names are AUTOINC, will modify the @$forks
+to reflect the actual topic name used.
+
+Returns alist of the topics created.
+
+Will throw WorkflowException if there's a problem (or Error if there's
+a deeper problem)
+
 =cut
 
 sub fork {
     my ( $this, $forks, $lockdown ) = @_;
     my $clone;
+    my $who = Foswiki::Func::getWikiUserName();
+
+    # Make sure the forked topic has CHANGE access
+    # SMELL: would be cleaner to have an *Allow Fork* column in the state
+    # table, but simply having CHANGE is enough.
+    unless (
+        Foswiki::Func::checkAccessPermission(
+            'CHANGE', $who, $this->{text}, $this->{topic}, $this->{web}
+        )
+      )
+    {
+        throw WorkflowException( $this, 'cannotfork' );
+    }
 
     foreach $clone (@$forks) {
-        throw WorkflowException( $this, 'forkalreadyexists',
-            "$clone->{web}.$clone->{topic}" )
-          if Foswiki::Func::topicExists( $clone->{web}, $clone->{topic} );
+
+        # AUTOINC - copied from Foswiki::UI::Save
+        if ( $clone->{topic} =~ m/^(.*)AUTOINC([0-9]+)(.*)$/ ) {
+            my $pre   = $1;
+            my $start = $2;
+            my $post  = $3;
+            my $pad   = length($start);
+            my $webObject =
+              Foswiki::Meta->new( $Foswiki::Plugins::SESSION, $clone->{web} );
+            my $it = $webObject->eachTopic();
+            while ( $it->hasNext() ) {
+                my $tn = $it->next();
+                next unless $tn =~ m/^${pre}([0-9]{$pad})${post}$/;
+                $start = $1 + 1 if ( $1 >= $start );
+            }
+            foreach my $cc (@$forks) {
+                next unless $cc->{topic} =~ m/^${pre}([0-9]{$pad})${post}$/;
+                $start = $1 + 1 if ( $1 >= $start );
+            }
+            my $next = sprintf( '%0' . $pad . 'd', $start );
+            $clone->{topic} =~ s/AUTOINC[0-9]+/$next/;
+        }
+        elsif ( Foswiki::Func::topicExists( $clone->{web}, $clone->{topic} ) ) {
+            throw WorkflowException( $this, 'forkalreadyexists',
+                "$clone->{web}.$clone->{topic}" );
+        }
     }
 
     my $forkedRev = $this->{meta}->getLoadedRev() + 1;
-    my $who       = Foswiki::Func::getWikiUserName();
 
     foreach my $clone (@$forks) {
 
@@ -909,10 +1014,11 @@ sub fork {
 
         $new->_addHistory(
             1,
-            author  => $who,
-            date    => time(),
-            state   => $this->getCurrentStateName(),
-            comment => Foswiki::Plugins::WorkflowPlugin::getString(
+            author   => $who,
+            date     => time(),
+            state    => $this->getCurrentStateName(),
+            forkfrom => "$this->{web}.$this->{topic}",
+            comment  => Foswiki::Plugins::WorkflowPlugin::getString(
                 'forkedfrom', "$this->{web}.$this->{topic}"
             ),
 
@@ -932,17 +1038,20 @@ sub fork {
     }
 
     # Record the fork in the source topic, and optionally lock it down
+    my $tgts = join( ', ', map { "$_->{web}.$_->{topic}" } @$forks );
     $this->_addHistory(
         $forkedRev,
-        author  => $who,
-        date    => time,
-        state   => $this->getCurrentStateName(),
-        comment => Foswiki::Plugins::WorkflowPlugin::getString(
-            'forkedto', join( ', ', map { "$_->{web}.$_->{topic}" } @$forks )
-        )
+        author => $who,
+        date   => time,
+        state  => $this->getCurrentStateName(),
+        forkto => $tgts,
+        comment =>
+          Foswiki::Plugins::WorkflowPlugin::getString( 'forkedto', $tgts )
     );
 
     $this->save($lockdown);
+
+    return $tgts;
 }
 
 =begin TML
@@ -995,7 +1104,7 @@ sub stringify {
     $this->{meta}     = $tmpmeta;
     $this->{workflow} = $tmpworkflow;
     $this->{_allowed} = $tmp_allowed;
-    $str =~ s/^\$VAR\d+\s*=\s*//;
+    $str =~ s/^\$VAR[0-9]+\s*=\s*//;
     return $str;
 }
 

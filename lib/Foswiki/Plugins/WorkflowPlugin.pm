@@ -80,16 +80,16 @@ sub getString {
     return unless $tmpl;
     my $s = Foswiki::Func::expandTemplate( 'workflow:' . $tmpl );
     ASSERT( defined $s, "workflow:$tmpl missing" ) if DEBUG;
-    $s =~ s{%PARAM(\d+)%}{$_[$1 - 1] // "?$1"}ge;
+    $s =~ s{%PARAM([0-9]+)%}{$_[$1 - 1] // "?$1"}ge;
     return $s;
 }
 
+# Convert a WorkflowException into an OopsException
 sub _oops {
     my $error = shift;
-    getString();
     throw Foswiki::OopsException(
-        'attention',
-        def    => "workflow:$error->{def}",
+        'workflow',
+        def    => 'workflow:' . $error->{def},
         params => $error->{params}
     );
 }
@@ -109,7 +109,7 @@ sub _getTopicParams {
       && Foswiki::Func::isValidWebName($web);
 
     my ($rev) =
-      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/(\d+)/ ) : ();
+      defined $attributes->{rev} ? ( $attributes->{rev} =~ m/([0-9]+)/ ) : ();
 
     return ( $web, $topic, $rev );
 }
@@ -171,7 +171,7 @@ sub _WORKFLOWSTATEMESSAGE {
         $result = $controlledTopic->getCurrentState()->{message};
     }
     catch WorkflowException with {
-        $result = shift->debug();
+        $result = shift->debug(1);
     };
     return $result;
 }
@@ -192,9 +192,10 @@ sub _WORKFLOWEDITTOPIC {
         my $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic, $rev );
+        $controlledTopic->{debug} = 1;
 
         throw WorkflowException( $controlledTopic, 'cantedit',
-            Foswiki::Func::getWikiName(),
+            $controlledTopic->{workflow}->{name},
             "$web.$topic" )
           unless $controlledTopic->canEdit();
 
@@ -203,7 +204,7 @@ sub _WORKFLOWEDITTOPIC {
             Foswiki::Func::getScriptUrl( $web, $topic, 'edit', t => time() ) );
     }
     catch WorkflowException with {
-        $tag = getString('strikeedit') . getString( 'debug', shift->debug() );
+        $tag = getString('strikeedit') . shift->debug(1);
     };
     return $tag;
 }
@@ -221,8 +222,8 @@ sub _WORKFLOWATTACHTOPIC {
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic, $rev );
 
-        throw WorkflowException( $controlledTopic,
-            'cantedit', Foswiki::Func::getWikiName(),
+        throw WorkflowException( $controlledTopic, 'cantedit',
+            $controlledTopic->{workflow}->{name},
             "$web.$topic" )
           unless $controlledTopic->canEdit();
 
@@ -231,7 +232,7 @@ sub _WORKFLOWATTACHTOPIC {
         );
     }
     catch WorkflowException with {
-        $tag = getString('strikeattach') . getString( 'debug', shift->debug() );
+        $tag = getString('strikeattach') . shift->debug(1);
     };
     return $tag;
 }
@@ -289,8 +290,7 @@ sub _WORKFLOWHISTORY {
         $result = Foswiki::Func::decodeFormatTokens($result);
     }
     catch WorkflowException with {
-        shift->warn();
-        $result = '';
+        $result = shift->debug(1);
     };
 
     return $result;
@@ -300,7 +300,7 @@ sub _WORKFLOWHISTORY {
 sub _WORKFLOWTRANSITION {
     my ( $session, $attributes, $topic, $web ) = @_;
 
-    my $form = '';
+    my $result = '';
 
     try {
         require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
@@ -317,36 +317,35 @@ sub _WORKFLOWTRANSITION {
           map  { $_->{action} } $controlledTopic->getTransitions();
 
         if ( scalar(@actions) ) {
-            $form =
+            $result =
               getString( 'txformhead', $controlledTopic->getCurrentStateName(),
                 $web, $topic );
 
             if ( scalar(@actions) == 1 ) {
-                $form .= getString( 'txformone', $actions[0] );
+                $result .= getString( 'txformone', $actions[0] );
             }
             else {
                 my $acts =
                   join( '', map { getString( 'txformeach', $_ ) } @actions );
-                $form .= getString( 'txformmany', $acts );
+                $result .= getString( 'txformmany', $acts );
             }
 
-            $form .= getString('txformfoot');
+            $result .= getString('txformfoot');
         }
         else {
-            $form .= getString('txformnone');
+            throw WorkflowException( $controlledTopic, 'txformnone' );
         }
     }
     catch WorkflowException with {
-        shift->warn();
-        $form = '';
+        $result = shift->debug(1);
     };
-    return $form;
+    return $result;
 }
 
 # Tag handler - button for inquiring state
 sub _WORKFLOWSTATE {
     my ( $session, $attributes, $topic, $web ) = @_;
-    my $result;
+    my $result = '';
 
     try {
         require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
@@ -362,40 +361,41 @@ sub _WORKFLOWSTATE {
 
         my $lastVersion = $controlledTopic->getLast( $state, 'VERSION' ) || '';
         my $hideNull = Foswiki::Func::isTrue( $attributes->{hidenull}, 0 );
-        return '' if $hideNull && !$lastVersion;
+        unless ( $hideNull && !$lastVersion ) {
+            my $workflow = $controlledTopic->{workflow};
 
-        my $workflow = $controlledTopic->{workflow};
+            my $message =
+              $controlledTopic->{workflow}->getState($state)->{message};
+            my $last        = $controlledTopic->getLast($state);
+            my $lastUser    = $last->{author};
+            my $lastTime    = $last->{date};
+            my $lastComment = $last->{comment};
 
-        my $message = $controlledTopic->{workflow}->getState($state)->{message};
-        my $last    = $controlledTopic->getLast($state);
-        my $lastUser    = $last->{author};
-        my $lastTime    = $last->{date};
-        my $lastComment = $last->{comment};
+            my @actions =
+              map { $_->{action} } $controlledTopic->getTransitions();
+            my $actions = join( ", ", @actions );
+            my $numActions = scalar(@actions);
 
-        my @actions = map { $_->{action} } $controlledTopic->getTransitions();
-        my $actions = join( ", ", @actions );
-        my $numActions = scalar(@actions);
+            $result = $attributes->{format} || '$state';
 
-        $result = $attributes->{format} || '$state';
+            $result =~ s/\$web/$web/g;
+            $result =~ s/\$topic/$topic/g;
+            $result =~ s/\$state/$state/g;
+            $result =~ s/\$message/$message/g;
+            $result =~ s/\$rev/$lastVersion/g;
+            $result =~ s/\$user/$lastUser/g;
+            $result =~ s/\$time/$lastTime/g;
+            $result =~ s/\$comment/$lastComment/g;
+            $result =~ s/\$numactions/$numActions/g;
+            $result =~ s/\$actions/$actions/g;
+            $result =~ s/\$(allowed|allowedit)/\$allowchange/g;    # legacy
 
-        $result =~ s/\$web/$web/g;
-        $result =~ s/\$topic/$topic/g;
-        $result =~ s/\$state/$state/g;
-        $result =~ s/\$message/$message/g;
-        $result =~ s/\$rev/$lastVersion/g;
-        $result =~ s/\$user/$lastUser/g;
-        $result =~ s/\$time/$lastTime/g;
-        $result =~ s/\$comment/$lastComment/g;
-        $result =~ s/\$numactions/$numActions/g;
-        $result =~ s/\$actions/$actions/g;
-        $result =~ s/\$(allowed|allowedit)/\$allowchange/g;    # legacy
-
-        $result =~
+            $result =~
 s/\$(allow[a-z]+)/$controlledTopic->expandMacros($workflow->getState($state)->{$1} || '')/ge;
+        }
     }
     catch WorkflowException with {
-        shift->warn();
-        $result = '';
+        $result = shift->debug(1);
     };
 
     return Foswiki::Func::decodeFormatTokens($result);
@@ -407,10 +407,20 @@ sub _WORKFLOWFORK {
     my $result;
 
     try {
-        require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
         ( $web, $topic, my $rev ) =
           _getTopicParams( $attributes, $web, $topic );
 
+        unless (
+            Foswiki::Func::checkAccessPermission(
+                'CHANGE', Foswiki::Func::getWikiName(),
+                undef, $topic, $web
+            )
+          )
+        {
+            throw WorkflowException( undef, 'cannotfork', "$web.$topic" );
+        }
+
+        require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
         my $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic, $rev );
@@ -457,7 +467,7 @@ sub _WORKFLOWFORK {
         }
     }
     catch WorkflowException with {
-        $result = shift->debug();
+        $result = shift->debug(1);
     };
     return $result;
 }
@@ -493,7 +503,7 @@ sub _WORKFLOWLAST {
         }
     }
     catch WorkflowException with {
-        $result = shift->debug();
+        $result = shift->debug(1);
     };
     return $result;
 }
@@ -539,7 +549,7 @@ sub _WORKFLOWLASTVERSION {
         $result = getString( 'lastversion', $web, $topic, $state );
     }
     catch WorkflowException with {
-        $result = shift->debug();
+        $result = shift->debug(1);
     };
     return $result;
 }
@@ -601,8 +611,7 @@ sub _restChangeState {
                 formtemplate => $newForm,
                 template     => 'workflowedit',
 
-                # Flag the transitional state to the edit
-                WORKFLOWINTRANSITION => $action
+                workflowintransition => 1
             );
         }
         else {
@@ -659,38 +668,32 @@ sub _restFork {
 
         my $lockdown = $query->param('lockdown');
 
-        $controlledTopic->fork( \@forks, $lockdown );
+        my $result = $controlledTopic->fork( \@forks, $lockdown );
 
-        my $url = Foswiki::Func::getScriptUrl( $web, $topic, 'view' );
-        $url = $session->redirectto($url);
-
-        Foswiki::Func::redirectCgiQuery( undef, $url );
+        throw WorkflowException( $controlledTopic, 'forked', $result );
     }
+
     catch WorkflowException with {
 
         # Convert the exception into an oops
         _oops(@_);
-    }
-
-    catch Foswiki::OopsException with {
-        my $e = shift;
-        $e->generate($session);
     };
     return undef;
+}
+
+# Purge tempoaray grant (see ControlledTopic for details)
+sub beforeSaveHandler {
+    my ( $text, $topic, $web, $meta ) = @_;
+    require Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
+    Foswiki::Plugins::WorkflowPlugin::ControlledTopic::purgeTemporaryGrant(
+        $meta);
 }
 
 # Used to trap an edit and check that it is permitted by the workflow
 sub beforeEditHandler {
     my ( $text, $topic, $web, $meta ) = @_;
 
-    # Presence of the WORKFLOWINTRANSITION parameter indicates that
-    # this edit is the follow-on to a state transition. In this case
-    # the topic may contain a temporary grant of CHANGE permission.
-    my $query = Foswiki::Func::getCgiQuery();
-    return unless $query->param('WORKFLOWINTRANSITION');
-
     my $controlledTopic;
-
     try {
         ( $web, $topic ) = _getTopicParams( {}, $web, $topic );
 
@@ -698,9 +701,8 @@ sub beforeEditHandler {
         $controlledTopic =
           Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load( $web,
             $topic );
-
-        # canEdit will clear any temporary grant
-        unless ( $controlledTopic->canEdit(1) ) {
+        $controlledTopic->{meta} = $meta;
+        unless ( $controlledTopic->canEdit() ) {
             throw Foswiki::OopsException(
                 'accessdenied',
                 status => 403,
@@ -709,10 +711,11 @@ sub beforeEditHandler {
                 topic  => $_[1],
                 params => [
                     'Edit',
-                    getString(
-                        'cantedit',
-                        Foswiki::Func::getWikiName()
-                          . $controlledTopic->{workflow}->{name}
+                    Foswiki::Func::expandCommonVariables(
+                        getString(
+                            'cantedit', $controlledTopic->{workflow}->{name},
+                            "$web.$topic"
+                        )
                     )
                 ]
             );
@@ -720,8 +723,9 @@ sub beforeEditHandler {
     }
     catch WorkflowException with {
 
-        # Set up failed, so there should be no object in the exception
-        shift->debug(1);
+        # Generate an alert so we get debugging, though we don't
+        # use the return
+        shift->debug();
     };
 }
 
@@ -743,14 +747,15 @@ sub beforeAttachmentSaveHandler {
                 'accessdenied',
                 status => 403,
                 def    => 'topic_access',
-                web    => $_[2],
-                topic  => $_[1],
+                web    => $web,
+                topic  => $topic,
                 params => [
                     'Attach',
-                    getString(
-                        'cantedit',
-                        Foswiki::Func::getWikiName()
-                          . $controlledTopic->{workflow}->{name}
+                    Foswiki::Func::expandCommonVariables(
+                        getString(
+                            'cantedit', $controlledTopic->{workflow}->{name},
+                            "$web.$topic"
+                        )
                     )
                 ]
             );
@@ -758,8 +763,9 @@ sub beforeAttachmentSaveHandler {
     }
     catch WorkflowException with {
 
-        # Set up failed, so there should be no object in the exception
-        shift->debug(1);
+        # Generate an alert so we get debugging, though we don't
+        # use the return.
+        shift->debug();
     };
 }
 
@@ -779,7 +785,11 @@ sub _solrIndexTopicHandler {
               $controlledTopic->getCurrentStateName() );
     }
     catch WorkflowException with {
-        shift->debug(1);
+
+        # Set up failed, so there should be no object in the exception
+        # Generate an alert so we get debugging, though we don't need/
+        # use the string.
+        shift->debug();
     };
 }
 

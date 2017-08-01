@@ -9,7 +9,7 @@ pub/System/WorkflowPlugin/Flow.gif 0640 Example image
 pub/System/WorkflowPlugin/Flow.draw 0640 Example image
 pub/System/WorkflowPlugin/convert.pl.txt 0640 Conversion script
 data/Sandbox/WorkflowPluginExample/ApproveForm.txt 0640 Example workflow
-data/Sandbox/WorkflowPluginExample/ControlledDocument.txt 0640 Example workflow
+data/Sandbox/WorkflowPluginExample/ControlledDocument.txt 0640 Template for a controlled document in the example workflow
 data/Sandbox/WorkflowPluginExample/DocumentApprovalWorkflow.txt 0640 Example workflow
 data/Sandbox/WorkflowPluginExample/RevisionForm.txt 0640 Example workflow
 data/Sandbox/WorkflowPluginExample/WebHome.txt 0640 Example workflow
@@ -17,6 +17,7 @@ data/Sandbox/WorkflowPluginExample/WebLeftBarExample.txt 0640 Example workflow
 data/Sandbox/WorkflowPluginExample/WebPreferences.txt 0640 Example workflow
 templates/mailworkflowmither.tmpl 0640 Mail template
 templates/mailworkflowtransition.tmpl 0640 Mail template
+templates/oopsworkflow.tmpl 0640 Message screen
 templates/workflowstrings.tmpl 0640 Translatable strings template
 templates/workflowedit.tmpl 0640 Edit template
 tools/workflowremind 0640 Perl script

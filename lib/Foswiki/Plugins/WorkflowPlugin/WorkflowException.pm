@@ -44,32 +44,44 @@ sub stringify {
 
 =begin TML
 
----++ ObjectMethod debug([$always]) -> $string
+---++ ObjectMethod debug([$tagReport]) -> $string
 
 If there is an object associated with the exception and debug is
-set in that object, or $always is true, stringify the exception.
+set in that object, or $alert is true, stringify the exception.
 
 If global debug is set in =configure=, write the string to
 the debug log. Return the generated string.
 
+If =$tagReport= is true, then behaviour depends on whether the exception
+has an associated object. If not, then a debug string is returned (e.g
+an HTML comment). Otherwise if the object has debug enabled, then an
+alert is generated.
+
 =cut
 
 sub debug {
-    my ( $this, $always ) = @_;
-    my $str = '';
+    my ( $this, $tagReport ) = @_;
 
-    if ( $always || $this->{object} && $this->{object}->{debug} ) {
+    my $str = Foswiki::Func::expandCommonVariables(
+        Foswiki::Plugins::WorkflowPlugin::getString(
+            $this->{def}, @{ $this->{params} }
+        )
+    );
 
-        $str = Foswiki::Func::expandCommonVariables(
-            Foswiki::Plugins::WorkflowPlugin::getString(
-                $this->{def}, @{ $this->{params} }
-            )
-        );
-    }
     if ( $str && $Foswiki::cfg{Plugins}{WorkflowPlugin}{Debug} ) {
         Foswiki::Func::writeDebug( __PACKAGE__ . $str );
     }
-    return $str;
+    if ($tagReport) {
+        if ( !$this->{object} ) {
+            return Foswiki::Plugins::WorkflowPlugin::getString( 'debug', $str );
+        }
+        elsif ( $this->{object}->{debug} ) {
+            return Foswiki::Plugins::WorkflowPlugin::getString( 'alert', $str );
+        }
+    }
+    else {
+        return $str;
+    }
 }
 
 1;
