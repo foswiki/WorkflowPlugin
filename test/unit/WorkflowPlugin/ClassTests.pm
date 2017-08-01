@@ -11,6 +11,8 @@ use Foswiki::Plugins::WorkflowPlugin;
 use Foswiki::Plugins::WorkflowPlugin::Workflow;
 use Foswiki::Plugins::WorkflowPlugin::ControlledTopic;
 use Foswiki::Plugins::WorkflowPlugin::WorkflowException;
+use Foswiki::Plugins::WorkflowPlugin::Mither;
+
 use Error qw(:try);
 
 sub new {
@@ -466,6 +468,36 @@ TOPIC
       Foswiki::Plugins::WorkflowPlugin::ControlledTopic->load(
         $this->{test_web}, 'TestPlugs' );
     $this->assert( !$controlledTopic->canEdit() );
+}
+
+sub test_mither {
+    my $this = shift;
+
+    Foswiki::Func::saveTopic(
+        $this->{test_web}, 'TestMither', undef,
+
+        <<TOPIC);
+%META:WORKFLOW{name="S1"}%
+%META:WORKFLOWHISTORY{name="1" state="S1" author="Author1" date="1498810000" }%
+%META:WORKFLOWHISTORY{name="2" state="S1" author="Author2" date="1498820000" }%
+%META:WORKFLOWHISTORY{name="3" state="S3" author="Author3" date="1498830000" }%
+%META:WORKFLOWHISTORY{name="4" state="S1" author="Author3" date="1498840000" }%
+%META:FIELD{name="Workflow" value="$this->{test_workflow}"}%
+TOPIC
+
+    Foswiki::Plugins::WorkflowPlugin::Mither::mither(
+        topic    => ["$this->{test_web}.TestM*r"],
+        workflow => $this->{test_workflow},
+        states   => { S1 => 1 }
+    );
+    $this->assert_num_equals( 1, scalar(@FoswikiFnTestCase::mails) );
+
+    foreach my $mail (@FoswikiFnTestCase::mails) {
+        $this->assert_equals( "$this->{test_web}.TestMither stuck in S1",
+            $mail->header('Subject') );
+        $this->assert_equals( 'jack@craggyisland.ie', $mail->header('To') );
+    }
+    @FoswikiFnTestCase::mails = ();
 }
 
 1;

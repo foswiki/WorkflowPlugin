@@ -91,7 +91,6 @@ sub mither {
         my @txes = $controlledTopic->{workflow}->getTransitions($pstate);
         foreach my $tx (@txes) {
             if ( $tx->{nextstate} eq $state ) {
-                $tx->{notify} = 'experiment@c-dot.co.uk';
                 $controlledTopic->notifyTransition(
                     $tx,
                     template         => 'WorkflowRemindMail',
