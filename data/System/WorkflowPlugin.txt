@@ -326,8 +326,10 @@ Hartkens, albeit it was focused on document approval and
 control. [[Foswiki:Main.ThomasWeigert][Thomas Weigert]] then merged
 the functionality of the
 [[Foswiki:Extensions.WorkFlowAddOn][WorkFlowAddOn]] into this
-plugin. Finally the plugin was almost completely rewritten by
-[[Foswiki:Main.CrawfordCurrie][Crawford Currie]] for maintainability.
+plugin. Finally the plugin was almost completely rewritten to the
+reverse-engineered spec (a few of the crappy bits were dropped) by
+[[Foswiki:Main.CrawfordCurrie][Crawford Currie]], for maintainability
+and efficiency.
 
 ---++ Installation Instructions
 
