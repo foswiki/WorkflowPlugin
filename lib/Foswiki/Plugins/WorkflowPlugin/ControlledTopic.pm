@@ -1,7 +1,7 @@
 #
 # Copyright (C) 2005 Thomas Hartkens <thomas@hartkens.de>
 # Copyright (C) 2005 Thomas Weigert <thomas.weigert@motorola.com>
-# Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
+# Copyright (C) 2008-2016 Crawford Currie http://c-dot.co.uk
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -104,12 +104,15 @@ sub getActions {
 
 # Set the current state in the topic
 sub setState {
-    my ( $this, $state, $version, $comment ) = @_;
+    my ( $this, $state, $version, $comment, $action ) = @_;
     return unless $this->isLatestRev();
 
     my $key = $state;
     $key =~ s/ +/_/g;
 
+    $this->{state}->{"LASTACTION"} = $action || $this->{state}{LASTACTION};
+    $this->{state}->{"LASTSTATE"} =
+      $this->{state}{name} || $this->{workflow}->getDefaultState();
     $this->{state}->{name}               = $state;
     $this->{state}->{"LASTVERSION_$key"} = $version;
     $this->{state}->{"LASTUSER_$key"}    = Foswiki::Func::getWikiUserName();
@@ -152,6 +155,13 @@ sub getHistoryText {
 
     my @results = ();
     my $index   = 0;
+    my $prev    = {
+        author  => "",
+        state   => $this->{workflow}->getDefaultState,
+        name    => "",
+        comment => "",
+    };
+
     foreach my $hist ( @{ $this->{history}->{data} } ) {
         next if $include && $hist->{state} !~ /$include/;
         next if $exclude && $hist->{state} =~ /$exclude/;
@@ -180,6 +190,16 @@ s/\$(day|dow|email|epoch|hours|http|isotz|minutes|mo|month|rcs|seconds|tz|wday|w
             $tmpl =~
 s/\$date/Foswiki::Func::formatTime($hist->{date}, undef, 'servertime')/ge;
             $tmpl =~ s/\$comment/$hist->{comment}/g;
+
+            $tmpl =~ s/\$prevwikiusername/$prev->{author}/g;
+            $tmpl =~ s/\$prevstate/$prev->{state}/g;
+            $tmpl =~ s/\$prevrev/$prev->{name}/g;
+            $tmpl =~
+s/\$prev(day|dow|email|epoch|hours|http|isotz|minutes|mo|month|rcs|seconds|tz|wday|we|week|ye|year)\b/$prev->{date}?Foswiki::Func::formatTime($prev->{date}, '$'.$1):""/ge;
+            $tmpl =~
+s/\$prevdate/$prev->{date}?Foswiki::Func::formatTime($prev->{date}, undef, 'servertime'):""/ge;
+            $tmpl =~ s/\$prevcomment/$prev->{comment}/g;
+
             $tmpl =~ s/\$index/$index/g;
         }
         push @results, $tmpl if defined $tmpl;
@@ -364,12 +384,11 @@ sub changeState {
     my ( $this, $action, $state, $comment ) = @_;
 
     return unless $this->isLatestRev();
+
     $state ||= $this->{workflow}->getNextState( $this, $action );
+
     die "No valid next state for '$action' from " . $this->getState()
       unless $state;
-
-    my $form = $this->{workflow}->getNextForm( $this, $action );
-    my $notify = $this->{workflow}->getNotifyList( $this, $action );
 
     my ( $revdate, $revuser, $version ) = $this->{meta}->getRevisionInfo();
     if ( ref($revdate) eq 'HASH' ) {
@@ -378,7 +397,8 @@ sub changeState {
           ( $info->{date}, $info->{author}, $info->{version} );
     }
 
-    $this->setState( $state, $version, $comment );
+    my $notify = $this->{workflow}->getNotifyList( $this, $action );
+    $this->setState( $state, $version, $comment, $action );
 
     push @{ $this->{history}->{data} },
       {
@@ -397,162 +417,138 @@ sub changeState {
             : ()
         )
     );
+
+    my $form = $this->{workflow}->getNextForm( $this, $action );
     if ($form) {
         $this->{meta}->put( "FORM", { name => $form } );
     }    # else leave the existing form in place
 
-    if ($notify) {
+    $this->notifyState( $action, $state, $notify );
+}
 
-        # Expand vars in the notify list. This supports picking up the
-        # value of the notifees from the topic itself.
-        $notify = $this->expandMacros($notify);
+sub notifyState {
+    my ( $this, $action, $state, $notify ) = @_;
 
-        # Dig up the bodies
-        my @persons = split( /\s*,\s*/, $notify );
-        my @emails;
-        my @templates;
-        my $templatetext        = undef;
-        my $currenttemplatetext = undef;
-        my $web                 = Foswiki::Func::expandCommonVariables('%WEB%');
+    $notify ||= $this->{workflow}->getNotifyList( $this, $action, $state );
+    return unless $notify;
 
-        foreach my $who (@persons) {
-            if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
-                push( @emails, $who );
-            }
-            elsif ( $who =~ /^template\((.*)\)$/ ) {
+    # Expand vars in the notify list. This supports picking up the
+    # value of the notifees from the topic itself.
+    $notify = $this->expandMacros($notify);
 
-                # Read template topic if provided one
-                my @webtopic = Foswiki::Func::normalizeWebTopicName( $web, $1 );
-                if ( Foswiki::Func::topicExists( $webtopic[0], $webtopic[1] ) )
-                {
-                    ( undef, $currenttemplatetext ) =
-                      Foswiki::Func::readTopic( $webtopic[0], $webtopic[1] );
-                    push(
-                        @templates,
-                        {
-                            text  => $currenttemplatetext,
-                            web   => $webtopic[0],
-                            topic => $webtopic[1],
-                        }
-                    );
-                }
-                else {
-                    Foswiki::Func::writeWarning( __PACKAGE__
-                          . " cannot find topic '"
-                          . $webtopic[0] . "."
-                          . $webtopic[1] . "'"
-                          . " - this template will not be executed!" );
-                }
+    # Dig up the bodies
+    my @persons = split( /\s*,\s*/, $notify );
+    my @emails;
+    my @templates           = ();
+    my $templatetext        = undef;
+    my $currenttemplatetext = undef;
+    my $web                 = Foswiki::Func::expandCommonVariables('%WEB%');
+
+    foreach my $who (@persons) {
+        if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
+            push( @emails, $who );
+        }
+        elsif ( $who =~ /^\s*template\(\s*(.*?)\s*\)\s*$/ ) {
+
+            # Read template topic if provided one
+            my @webtopic = Foswiki::Func::normalizeWebTopicName( $web, $1 );
+            if ( Foswiki::Func::topicExists( $webtopic[0], $webtopic[1] ) ) {
+                ( undef, $currenttemplatetext ) =
+                  Foswiki::Func::readTopic( $webtopic[0], $webtopic[1] );
+                push(
+                    @templates,
+                    {
+                        text  => $currenttemplatetext,
+                        web   => $webtopic[0],
+                        topic => $webtopic[1],
+                    }
+                );
             }
             else {
-                if ( $who =~ /^LASTUSER_.+$/ ) {
-
-                    #extract LASTUSER from workflow-attribute
-                    $who = $this->getState($who);
-                }
-
-                $who =~ s/^.*\.//;    # web name?
-                my @list = Foswiki::Func::wikinameToEmails($who);
-                if ( scalar(@list) ) {
-                    push( @emails, @list );
-                }
-                else {
-                    Foswiki::Func::writeWarning( __PACKAGE__
-                          . " cannot send mail to '$who'"
-                          . " - cannot determine an email address" );
-                }
+                Foswiki::Func::writeWarning( __PACKAGE__
+                      . " cannot find topic '"
+                      . $webtopic[0] . "."
+                      . $webtopic[1] . "'"
+                      . " - this template will not be executed!" );
             }
         }
-        if ( scalar(@emails) ) {
+        else {
+            if ( $who =~ /^LASTUSER_.+$/ ) {
 
-            # Have a list of recipients
-            my $defaulttemplate = undef;
-            my $text            = undef;
-            my $currentweb      = undef;
-            my $currenttopic    = undef;
-
-            # See if this workflow has a custom default email template defined
-            $defaulttemplate =
-              $this->{workflow}->{preferences}->{WORKFLOWDEFAULTEMAILTEMPLATE};
-            if ( $defaulttemplate && ( $defaulttemplate ne '' ) ) {
-                ( $currentweb, $currenttopic ) =
-                  Foswiki::Func::normalizeWebTopicName( $web,
-                    $defaulttemplate );
-                if ( Foswiki::Func::topicExists( $currentweb, $currenttopic ) )
-                {
-                    ( undef, $text ) =
-                      Foswiki::Func::readTopic( $currentweb, $currenttopic );
-                }
-                else {
-                    Foswiki::Func::writeWarning( __PACKAGE__
-                          . " cannot find topic '$currentweb.$currenttopic'"
-                          . " - falling back to default email template" );
-                }
-
+                #extract LASTUSER from workflow-attribute
+                $who = $this->getState($who);
             }
 
-            # Otherwise, use the shipped default template
-            if ( !$text || ( $text eq '' ) ) {
-                $text = Foswiki::Func::loadTemplate('mailworkflowtransition');
+            $who =~ s/^.*\.//;    # web name?
+            my @list = Foswiki::Func::wikinameToEmails($who);
+            if ( scalar(@list) ) {
+                push( @emails, @list );
+            }
+            else {
+                Foswiki::Func::writeWarning( __PACKAGE__
+                      . " cannot send mail to '$who'"
+                      . " - cannot determine an email address" );
+            }
+        }
+    }
+    if ( scalar(@emails) ) {
+
+        # Have a list of recipients
+        my $defaulttemplate = undef;
+        my $text            = undef;
+        my $currentweb      = undef;
+        my $currenttopic    = undef;
+
+        # See if this workflow has a custom default email template defined
+        $defaulttemplate =
+          $this->{workflow}->{preferences}->{WORKFLOWDEFAULTEMAILTEMPLATE};
+        if ( $defaulttemplate && ( $defaulttemplate ne '' ) ) {
+            ( $currentweb, $currenttopic ) =
+              Foswiki::Func::normalizeWebTopicName( $web, $defaulttemplate );
+            if ( Foswiki::Func::topicExists( $currentweb, $currenttopic ) ) {
+                ( undef, $text ) =
+                  Foswiki::Func::readTopic( $currentweb, $currenttopic );
+            }
+            else {
+                Foswiki::Func::writeWarning( __PACKAGE__
+                      . " cannot find topic '$currentweb.$currenttopic'"
+                      . " - falling back to default email template" );
             }
 
-            my $tofield = join( ', ', @emails );
+        }
 
-            Foswiki::Func::setPreferencesValue( 'EMAILTO', $tofield );
+        # Otherwise, use the shipped default template
+        if ( !$text || ( $text eq '' ) ) {
+            $text = Foswiki::Func::loadTemplate('mailworkflowtransition');
+        }
+
+        my $tofield = join( ', ', @emails );
+
+        Foswiki::Func::setPreferencesValue( 'EMAILTO', $tofield );
 
      #if this workflow has a custom email template defined via the notify-column
      #use only this template
-            if ( scalar(@templates) ) {
-                foreach my $template (@templates) {
-                    Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
-                        $this->getState() );
-                    Foswiki::Func::setPreferencesValue( 'TEMPLATE',
-                        $template->{web} . "." . $template->{topic} );
-                    $template->{text} =
-                      $this->expandMacros( $template->{text} );
-
-#print STDERR "1: template=$template->{web}.$template->{topic}, email=$template->{text}\n";
-                    my $errors =
-                      Foswiki::Func::sendEmail( $template->{text}, 3 );
-                    if ($errors) {
-                        Foswiki::Func::writeWarning(
-                            'Failed to send transition mails: ' . $errors );
-                    }
-                }
-            }
-            else {
-                Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
-                    $this->getState() );
-                $text = $this->expandMacros($text);
-                my $errors = Foswiki::Func::sendEmail( $text, 3 );
-                if ($errors) {
-                    Foswiki::Func::writeWarning(
-                        'Failed to send transition mails: ' . $errors );
-                }
-            }
-        }
-        elsif ( scalar(@templates) ) {
-
-           #if no emails are specified, try to send the custom templates anyways
+        if ( scalar(@templates) ) {
             foreach my $template (@templates) {
-                Foswiki::Func::setPreferencesValue( 'TARGET_STATE',
-                    $this->getState() );
                 Foswiki::Func::setPreferencesValue( 'TEMPLATE',
                     $template->{web} . "." . $template->{topic} );
-                $template->{text} = $this->expandMacros( $template->{text} );
-
-#print STDERR "2: template=$template->{web}.$template->{topic}, email=$template->{text}\n";
-                my $errors = Foswiki::Func::sendEmail( $template->{text}, 3 );
-                if ($errors) {
-                    Foswiki::Func::writeWarning(
-                        'Failed to send transition mails: ' . $errors );
-                }
+                $this->sendEmail( $template->{text} );
             }
         }
+        else {
+            $this->sendEmail($text);
+        }
+    }
+    elsif ( scalar(@templates) ) {
 
-    }    #end notify
+        #if no emails are specified, try to send the custom templates anyways
+        foreach my $template (@templates) {
+            Foswiki::Func::setPreferencesValue( 'TEMPLATE',
+                $template->{web} . "." . $template->{topic} );
+            $this->sendEmail( $template->{text} );
+        }
+    }
 
-    return undef;
 }
 
 # Save the topic to the store
@@ -561,6 +557,21 @@ sub save {
 
     Foswiki::Func::saveTopic( $this->{web}, $this->{topic}, $this->{meta},
         $this->{text}, { forcenewrevision => 1 } );
+}
+
+sub sendEmail {
+    my ( $this, $text ) = @_;
+
+    Foswiki::Func::setPreferencesValue( 'TARGET_STATE', $this->getState() );
+    $text = $this->expandMacros($text);
+    my $errors = Foswiki::Func::sendEmail( $text, 3 );
+
+    if ($errors) {
+        Foswiki::Func::writeWarning(
+            'Failed to send transition mails: ' . $errors );
+    }
+
+    return $errors;
 }
 
 sub expandMacros {

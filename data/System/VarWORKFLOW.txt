@@ -1,23 +1,170 @@
 %META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
 #VarWEB
----+++ WORKFLOW* -- macros associated with WorkflowPlugin
-| *Controlling topics in the workflow* ||
-| =%<nop>WORKATTACHTOPIC%= | Expands to a link that lets you attach to the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
-| =%<nop>WORKFLOWEDITTOPIC%= | Expands to a link that lets you edit the topic (if the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>).|
-| =%<nop>WORKFLOWFORK{...}%= | Expands to a button that will create a copy of the _current_ topic (see below for more details) |
-| =%<nop>WORKFLOWTRANSITION%= | Expands to either (a) a pull-down menu if the user can perform more than one transition, (b) a button if the current user can only perform one transition, or (c) empty space if the current user is not allowed to perform any action. You can change the format of the button using a CSS class (see WORKFLOWTRANSITIONCSSCLASS below) |
-| *Querying the workflow* ||
-| =%<nop>WORKFLOWHISTORY%= | Expands to the history of state transitions the topic has undergone. The format of the history is dictated by the =WORKFLOWHISTORYFORMAT= (described below). |
-| =%<nop>WORKFLOWLASTREV{"State"}%= | Expands to the version number when the document was last in the state _State_. |
-| =%<nop>WORKFLOWLASTTIME{"State"}%= | Expands to the timestamp when the document was last in the _State_ state. For example, =%<nop>WORKFLOWLASTTIME{"APPROVED"}%= would be replaced by the timestamp when the document was last in the =APPROVED= state. |
-| =%<nop>WORKFLOWLASTUSER{"State"}%= | Expands to the last user who transitioned the document into the state _State_. |
-| =%<nop>WORKFLOWLASTVERSION{"State"}%= | Expands to a link to the version of the document when it was last in the state _State_. |
-| =%<nop>WORKFLOWSTATE%= | Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned. |
-| =%<nop>WORKFLOWSTATEMESSAGE%= | Expands to the corresponding message in the state table. |
+---+++ WORKFLOWSTATE
 
-(All the macros accept an optional default parameter, which is the name of a topic, a =web= and a =rev= parameter. If these are omitted, they will default to the current topic, latest revision)
+Render information about the current state of the documentation
 
-Furthermore, the plugin replaces any macro starting with =WORKFLOW= that is defined in the workflow description file.
+Syntax =%<nop>WORKFLOWSTATE{"&lt;<topic>" &lt;parameters>"}%=
+
+| *Parameter* | *Description* | *Default* |
+| =&lt;topic>= | topic to return the state of | current topic |
+| =rev= | revision of the topic | latest revision |
+| =state= | specify the state to render information about | current workflow state of the topic |
+| =hidenull= | boolean to hide any output in case the revision to render is not the latest one | off |
+| =format= | format string to render state information | =$state= |
+
+The =format= parameter may take a couple of variables that expand to the properties of the given topic, revision and state:
+
+   * =$web=: the web name of the current topic
+   * =$topic=: the topic name
+   * =$state=: the state label as specified in the state table
+   * =$message=: the state message of the current topic's state
+   * =$rev=: the revision of the topic when it last was in the given state 
+   * =$user=: the user last user who transitioned the topic to the state
+   * =$time=: the timestamp when the topic was last in the state
+   * =$comment=: the comment provided when transitioning into the state
+   * =$numactions=: the number of possible transitions that may follow up to the current state
+   * =$actions=: comma-separated list of possible actions starting from this state
+   * =$allowedit=: edit rights of the topic in the current state
+   * =$allowview=: view rights of the topic in the current state
+   * =$prevstate=: previous state before the topic transitioned into the current one
+   * =$prevaction=: action being used to transition the topic into the current state
+   * =$defaultstate=: label of the default starting state of the workflow
+
+---+++ WORKFLOWTRANSITION
+
+Expands to either (a) a pull-down menu if the user can perform more than one transition, (b) a button if the current user can only perform one transition, or (c) empty space if the current user is not allowed to perform any action. You can change the format of the button using a CSS class (see WORKFLOWTRANSITIONCSSCLASS below) |
+
+Note that you may also create a custom UI to transition a document. Below an example to render a button to trigger a modal transition dialog. 
+
+<verbatim class="tml">
+%JQREQUIRE{"ui::dialog"}%
+
+%IF{"$'URLPARAM{rev}'='' and '%WORKFLOWSTATE{format="$numactions"}%'>0" 
+  then="$percntBUTTON{
+          \"Change State\" 
+          href=\"#changeStateDialog\" 
+          class=\"jqUIDialogLink\"
+        }$percnt"
+}%
+
+<div id="changeStateDialog" title="Change State" class="jqUIDialog foswikiHideOnPrint" style="display:none" data-modal="true" data-position="center" data-width="540" data-cached="true">
+  <form class="workflowChangeStateForm" action="%SCRIPTURLPATH{"rest"}%/WorkflowPlugin/changeState" method="post">
+    <div class="foswikiFormSteps">
+      <div class="foswikiFormStep">
+        <h3>New State:</h3>
+        %FORMATLIST{
+          "%WORKFLOWSTATE{format="$actions"}%"
+          split="\s*,\s*"
+          selection="^(%FORMATLIST{"%WORKFLOWSTATE{format="$actions"}%" split="\s*,\s*" limit="1"}%)$"
+          marker="checked='checked'"
+          format="<label><input type='radio' name='WORKFLOWACTION' $marker value='$1'>$1</label>"
+          separator="$n"
+        }%
+      </div>
+      <div class='foswikiFormStep'>
+        <h3>Comment:</h3>
+        <input type="text" name="WORKFLOWCOMMENT" size="60" class="foswikiInputField" />
+      </div>
+      <a class="jqUIDialogButton jqUIDialogSubmit {icon:'ui-icon-circle-check'}">%MAKETEXT{"Submit"}%</a>
+      <a class="jqUIDialogButton jqUIDialogClose {icon:'ui-icon-cancel'}">%MAKETEXT{"Cancel"}%</a>
+    </div>
+  </form>
+</div>
+</verbatim>
+
+---+++ WORKFLOWFORK
+
+Expands to a button that will create a copy of the _current_ topic (see below for more details)
+
+---+++ WORKFLOWHISTORY
+
+Expands to the history of state transitions the topic has undergone. The format of the history is dictated by the =WORKFLOWHISTORYFORMAT= (described below). 
+
+---++ Deprecated WORKFLOW* macros
+
+Below macros are still provided for backwards compatibility but are superseded by the =%WORKFLOWSTATE= and =%WORKFLOWTRANSITION= macros.
+
+---+++ WORKATTACHTOPIC, WORKFLOWEDITTOPIC
+Expands to a link that lets you attach or edit to the topic. If the user is not able to modify the topic, either in the workflow sense or according to the standard access controls, the link will be <strike>struck out</strike>.
+
+Change access to a topic controlled by a workflow is properly controlled by Foswiki's own access control mechanisms. Use below expression to display or suppress an edit link if needed:
+
+<verbatim class="tml">
+%IF{"'%TOPIC%' allows 'change'" 
+  then="<a href='%SCRIPTURLPATH{"edit"}%/%WEB%/%TOPIC%?t=%GMTIME{"$epoch"}%>edit</a>"
+  else="<a href='#'><del>edit</del></a>"
+}% 
+</verbatim>
+
+---+++ WORKFLOWSTATE
+
+Expands to the current state of the document. It can also be given a =topic= parameter (default), in which case the state of that topic is returned.
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE%
+</verbatim>
+
+
+---+++ WORKFLOWSTATEMESSAGE
+
+Expands to the corresponding message in the state table. 
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE{state="..." format="$message"}%
+</verbatim>
+
+---+++ WORKFLOWLASTUSER
+
+Expands to the last user who transitioned the document into the state.
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE{state="..." format="$user"}%
+</verbatim>
+
+---+++ WORKFLOWLASTTIME
+Expands to the timestamp when the document was last in the given state. 
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE{state="..." format="$time"}%
+</verbatim>
+
+For example, =%<nop>WORKFLOWSTATE{state="APPROVED" format="$time"}%= would be replaced by the timestamp when the document was last in the =APPROVED= state.
+
+---+++ WORKFLOWLASTREV
+
+Expands to the version number when the document was last in the state.
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE{state="..." format="$rev"}%
+</verbatim>
+
+---+++ WORKFLOWLASTVERSION
+
+Expands to a link to the version of the document when it was last in the state
+
+Use below expression instead:
+
+<verbatim class="tml">
+%WORKFLOWSTATE{
+  state="..." 
+  format="<a href='%SCRIPTURLPATH{"view"}%/$web/$topic?rev=$rev'>Display topic last time in state '$state'</a>"
+}%
+</verbatim>
+
+
+---++ Further notes on WORKFLOW* macros
+The plugin replaces any macro starting with =WORKFLOW= that is defined in the workflow description file.
 
 If the topic is *not* controlled, then any references to =WORKFLOW= macros are simply removed (you can use this behaviour to place these tags in the header or footer in your skin templates. They appear only if the currently displayed document is controlled. Otherwise, they are just removed and do not disturb the layout).
 
@@ -59,3 +206,5 @@ The histories in both the fork copies and the original topic record what happene
 The user has to be able to modify the topic (both in the workflow sense and according to the standard access controls) in order to fork.
 
 %X% due to a bug in versions of the plugin prior to Oct 2009, the default "TopicName" parameter was interpreted as the name of the *new* topic to fork to. This has been corrected, but the macro will revert to the old meaning if you omit the =newnames= parameter.
+
+%JQREQUIRE{"chili"}%

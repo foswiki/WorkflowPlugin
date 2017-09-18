@@ -1,12 +1,12 @@
-%META:TOPICINFO{author="ProjectContributor" date="1407507830" format="1.1" version="1"}%
+%META:TOPICINFO{author="micha" date="1446804144" format="1.1" version="2"}%
 %META:TOPICPARENT{name="ReferenceManual"}%
 ---+ %TOPIC%
-<!--
-   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
--->
-<div style="float:right">
-%ATTACHURL%/Flow.gif
-</div>
+<img src="%ATTACHURL%/Flow.gif" align="right" width='291' height='369' alt='Flow.gif' />
+%FORMFIELD{"Description"}%
+
+%TOC%
+
+---++ Description
 Foswiki provides a flexible system of Access Control Lists that can be used to control who can modify a topic. Sometimes this isn't quite enough, and the access control depends on the state that a topic is in.
 
 For example,
@@ -26,8 +26,12 @@ A workflow can be associated with a single topic, or with an entire web.
 
 ---++ Usage
 
-A topic is under document control if the preference variable =WORKFLOW= is set
-in the topic page. =WORKFLOW= must be set to the wiki name of a topic that describes your specific workflow (the _workflow description topic_).
+A topic is under document control if the workflow name is set 
+
+   * in a preference variable =WORKFLOW= in the topic page or 
+   * in a form field named "Workflow" in the attached [[%SYSTEMWEB%.DataForms][data form]]
+
+The workflow name must be set to the wiki name of a topic that describes your specific workflow (the _workflow description topic_).
 
 Note: you can hide the setting in a normal view using HTML comments, or better, you can put these settings into the local topic settings, accessible from the "more" screen.
 
@@ -37,19 +41,20 @@ The workflow description topic must contain one state table and one transition t
 
 This is easiest illustrated using an example (available as Sandbox.DocumentApprovalWorkflow if the plugin is installed).
 
-The state table is a table with three columns:
+The state table is a table with four columns:
 
 <verbatim>
-| *State*       | *Allow Edit* | *Message* |
-| UNDERREVISION | QualityGroup | This document is being revised. |
-| APPROVED      | nobody       | This document has been approved for release. |
-| WAITINGFORQM  | nobody       | This document is waiting for approval by the Quality Manager. |
-| WAITINGFORCTO | nobody       | This document is waiting for approval by the CTO.|
+| *State*       | *Allow Edit* | *Allow View* | *Message* |
+| UNDERREVISION | QualityGroup |  | This document is being revised. |
+| APPROVED      | nobody       |  | This document has been approved for release. |
+| WAITINGFORQM  | nobody       |  | This document is waiting for approval by the Quality Manager. |
+| WAITINGFORCTO | nobody       |  | This document is waiting for approval by the CTO.|
 </verbatim>
 
 Each row in the table defines a state where:
 	* the *State* column specifies a name for the state, 
-	* the *Allow Edit* column specifies who is permitted to edit the topic when it is in the state, and 
+	* the *Allow Edit* column specifies who is permitted to edit the topic when it is in the state, 
+	* the *Allow View* column specifies who is permitted to view the topic when it is in the state, and 
 	* the *Message* column defines a message which can be displayed on the document page when the document is in this state.
 
 In the example we have defined four states. Members of the
@@ -92,6 +97,7 @@ If a form name is given in the *Form* column, this form will be attached to the 
 A typical usage of the form would be to collect additional information as the topic walks through the work flow, or to make information in the form unchangeable (by setting it to a =label= field) once a given state is reached.
 
 If a *Notify* column is given, that column can contain a comma-separated list of notification targets to be informed when the transition is fired. You can specify values in any combination of the following formats:
+
 | *Format* | *Example* | *Notes* |
 | Email addresses | webmaster@example.com | |
 | User wiki names | Main.WikiGuest | |
@@ -114,7 +120,7 @@ Content-Type: text/plain
 %SCRIPTURL{"view"}%/%WEB%/%TOPIC%
 </verbatim>
 
-Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body beginning below the first blank line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[%%BASETOPIC%#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how !WorkflowPlugin expands macros.
+Email notification templates should be topics formatted like the example above, with the headers each on their own line, followed by a single colon, then their values, with the message body beginning below the first blank line.  Also note the =%EMAILTO%= macro on the =To:= line; any email addresses pulled from the *Notify* column for a given transition will be expanded here.  If you override the default email template using the =WORKFLOWDEFAULTEMAILTEMPLATE= preference, it *must* use the =%EMAILTO%= to pull in recipients, otherwise you'll need to provide your own macros, and any email addresses provided in the *Notify* column _will be ignored_.  See the [[#Content_45sensitive_workflows][content-sensitive workflows]] section for more on how !WorkflowPlugin expands macros.
 
 For more sophisticated email notification, you can also write one or more custom email templates for each transition. Custom notification templates can either provide valid headers that define their recipients or access the =EMAILTO= macro, so other email addresses provided will be sent exclusively through custom templates.
 
@@ -129,12 +135,6 @@ For example, the *Notify* column in the transition below will email =jim@example
 ---+++ Settings in your controlled document/topic 
 
 As described above the topic needs to contain a definition for the variable =WORKFLOW= for it to be controlled under the approval workflow. This is best set as a document-specific preference setting in the =More topic actions= screen.
-
-%INCLUDE{VarWORKFLOW}%
-
-If you replace =%<nop>EDITTOPIC%= with =%<nop>WORKFLOWEDITTOPIC%= in your skin templates, then the _Edit_ link is crossed out when the user is not allowed to edit the page in a state.
-
-Similarly, you can use =%<nop>WORKFLOWATTACHTOPIC%= in your skin templates to cross out the _Attach_ link.  
 
 ---+++ Content-sensitive workflows
 *Advanced* Flows can be made sensitive to the content of the controlled
@@ -164,11 +164,15 @@ topic that uses the workflow. For example:
 	* Set WORKFLOWNOTICE = This topic is under document control.
 will define =WORKFLOWNOTICE= in any topic that uses the workflow.
 
----++ Reporting
+---+++ Reporting
 A common requirement is to report on the status of topics that are in different states in the workflow. You can use the query search to search for topics in a specific state. For example, to search for all topics in state "APPROVED":
 <verbatim>
 %SEARCH{"META:WORKFLOW.name='APPROVED'" type="query"}%
 </verbatim>
+
+---++ Syntax
+%INCLUDE{VarWORKFLOW}%
+
 
 ---++ History and Acknowledgements
 
@@ -187,11 +191,14 @@ __Note:__ For strict access control, the plugin should know who is looking at th
 
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Thomas Hartkens, Foswiki:Main.ThomasWeigert, Foswiki:Main.CrawfordCurrie"}%
-%META:FIELD{name="Version" title="Version" value="%$VERSION%"}%
-%META:FIELD{name="Release" title="Release" value="%$RELEASE%"}%
-%META:FIELD{name="Repository" attributes="" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
-%META:FIELD{name="Support" attributes="" title="Support" value="http://foswiki./org/Support/WorkflowPlugin"}%
-%META:FIELD{name="Home" attributes="" title="Home" value="http://foswiki.org/Extensions/WorkflowPlugin"}%
+%META:FIELD{name="Version" title="Version" value="%25$VERSION%25"}%
+%META:FIELD{name="Release" title="Release" value="%25$RELEASE%25"}%
+%META:FIELD{name="Description" title="Description" value=""}%
+%META:FIELD{name="Repository" title="Repository" value="https://github.com/foswiki/WorkFlowPlugin"}%
+%META:FIELD{name="Copyright" title="Copyright" value=""}%
+%META:FIELD{name="License" title="License" value=""}%
+%META:FIELD{name="Home" title="Home" value="https://foswiki.org/Extensions/WorkflowPlugin"}%
+%META:FIELD{name="Support" title="Support" value="http://foswiki./org/Support/WorkflowPlugin"}%
 %META:FILEATTACHMENT{name="convert.pl.txt" attr="h" comment="" date="1407507830" path="convert.pl.txt" size="355" user="ProjectContributor" version="1"}%
 %META:FILEATTACHMENT{name="Flow.draw" attr="h" comment="" date="1407507830" path="Flow.draw" size="5504" user="ProjectContributor" version="1"}%
 %META:FILEATTACHMENT{name="Flow.gif" attr="h" comment="" date="1407507830" path="Flow.gif" size="3252" user="ProjectContributor" version="1"}%

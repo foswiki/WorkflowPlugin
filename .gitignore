@@ -1,9 +1,9 @@
 *.swp
 igp_*
-WorkflowPlugin.md5
-WorkflowPlugin.sha1
-WorkflowPlugin.tgz
-WorkflowPlugin.txt
-WorkflowPlugin.zip
-WorkflowPlugin_installer
-WorkflowPlugin_installer.pl
+/WorkflowPlugin.md5
+/WorkflowPlugin.sha1
+/WorkflowPlugin.tgz
+/WorkflowPlugin.txt
+/WorkflowPlugin.zip
+/WorkflowPlugin_installer
+/WorkflowPlugin_installer.pl

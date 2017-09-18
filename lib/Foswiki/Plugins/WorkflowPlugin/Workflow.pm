@@ -68,7 +68,7 @@ sub new {
     foreach my $line ( split( /\n/, $text ) ) {
         if (
             $line =~ s/^\s*\|([\s*]*State[\s*]*\|
-                           [\s*]*Action[\s*]*\|.*)\|$/$1/ix
+                           [\s*]*Action[\s*]*\|.*)\|\s*$/$1/ix
           )
         {
 
@@ -80,7 +80,7 @@ sub new {
         elsif (
             $line =~ s/^\s*\|([\s*]*State[\s*]*\|
 			      (?:[\s*]*Allow\s*View[\s*]*\|)?
-                              [\s*]*Allow\s*Edit[\s*]*\|.*)\|$/$1/ix
+                              [\s*]*Allow\s*Edit[\s*]*\|.*)\|\s*$/$1/ix
           )
         {
 
@@ -94,7 +94,7 @@ sub new {
             # store preferences
             $this->{preferences}->{$1} = $2;
         }
-        elsif ( defined($inTable) && $line =~ s/^\s*\|\s*(.*?)\s*\|$/$1/ ) {
+        elsif ( defined($inTable) && $line =~ s/^\s*\|\s*(.*?)\s*\|\s*$/$1/ ) {
 
             my %data;
             my $i = 0;
@@ -122,11 +122,14 @@ sub new {
 
 # Get the possible actions associated with the given state
 sub getActions {
-    my ( $this, $topic ) = @_;
-    my @actions      = ();
-    my $currentState = $topic->getState();
+    my ( $this, $topic, $state ) = @_;
+
+    $state ||= $topic->getState();
+
+    my @actions = ();
+
     foreach my $t ( @{ $this->{transitions} } ) {
-        next unless $t->{state} eq $currentState;
+        next unless $t->{state} eq $state;
         my $nextState = $topic->expandMacros( $t->{nextstate} );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
@@ -140,10 +143,12 @@ sub getActions {
 # (the first 2 columns of the transition table). The returned state
 # will be undef if the transition doesn't exist, or is not allowed.
 sub getNextState {
-    my ( $this, $topic, $action ) = @_;
-    my $currentState = $topic->getState();
+    my ( $this, $topic, $action, $state ) = @_;
+
+    $state ||= $topic->getState();
+
     foreach my $t ( @{ $this->{transitions} } ) {
-        next unless $t->{state} eq $currentState && $t->{action} eq $action;
+        next unless $t->{state} eq $state && $t->{action} eq $action;
         my $nextState = $topic->expandMacros( $t->{nextstate} || '' );
         next unless $nextState;
         my $allowed = $topic->expandMacros( $t->{allowed} );
@@ -156,10 +161,12 @@ sub getNextState {
 # (the first 2 columns of the transition table). The returned form
 # will be undef if the transition doesn't exist, or is not allowed.
 sub getNextForm {
-    my ( $this, $topic, $action ) = @_;
-    my $currentState = $topic->getState();
+    my ( $this, $topic, $action, $state ) = @_;
+
+    $state ||= $topic->getState();
+
     foreach my $t ( @{ $this->{transitions} } ) {
-        next unless $t->{state} eq $currentState && $t->{action} eq $action;
+        next unless $t->{state} eq $state && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
         return $t->{form} if _isAllowed( $allowed, $topic );
     }
@@ -170,10 +177,12 @@ sub getNextForm {
 # (the first 2 columns of the transition table). The returned list
 # will be undef if the transition doesn't exist, or is not allowed.
 sub getNotifyList {
-    my ( $this, $topic, $action ) = @_;
-    my $currentState = $topic->getState();
+    my ( $this, $topic, $action, $state ) = @_;
+
+    $state ||= $topic->getState();
+
     foreach my $t ( @{ $this->{transitions} } ) {
-        next unless $t->{state} eq $currentState && $t->{action} eq $action;
+        next unless $t->{state} eq $state && $t->{action} eq $action;
         my $allowed = $topic->expandMacros( $t->{allowed} );
         return $t->{notify} if _isAllowed( $allowed, $topic );
     }
@@ -197,24 +206,30 @@ sub getMessage {
 # Determine if the current user is allowed to edit a topic that is in
 # the given state.
 sub allowEdit {
-    my ( $this, $topic ) = @_;
+    my ( $this, $topic, $state ) = @_;
 
-    my $state = $topic->getState();
+    $state ||= $topic->getState();
+
     return 0 unless $this->{states}->{$state};
+
     my $allowed =
       $topic->expandMacros( $this->{states}->{$state}->{allowedit} || '' );
+
     return _isAllowed( $allowed, $topic );
 }
 
 # Determine if the current user is allowed to view a topic that is in
 # the given state.
 sub allowView {
-    my ( $this, $topic ) = @_;
+    my ( $this, $topic, $state ) = @_;
 
-    my $state = $topic->getState();
+    $state ||= $topic->getState();
+
     return 0 unless $this->{states}->{$state};
+
     my $allowed =
       $topic->expandMacros( $this->{states}->{$state}->{allowview} || '' );
+
     return _isAllowed( $allowed, $topic );
 }
 
