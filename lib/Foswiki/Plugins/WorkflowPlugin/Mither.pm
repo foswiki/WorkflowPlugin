@@ -22,6 +22,7 @@ passed. See tools/workflowremind for more about options.
    * =topic= - array of topic wildcard specs
    * =workflow= - name of workflow
    * =states= - map of states to time limits
+   * =debug= - to get a report of what it would do (no emails are sent)
 
 =cut
 
@@ -66,7 +67,7 @@ sub mither {
 
         my $state     = $controlledTopic->getCurrentStateName();
         my $timelimit = $options{states}->{$state};
-        next unless $timelimit > 0;
+        next unless defined $timelimit && $timelimit > 0;
 
         # Get the most recent history record for the state so
         # we know when we transitioned into this state
@@ -91,13 +92,20 @@ sub mither {
         my @txes = $controlledTopic->{workflow}->getTransitions($pstate);
         foreach my $tx (@txes) {
             if ( $tx->{nextstate} eq $state ) {
+                $stuck /= 88640;    # convert to days
+                if ( $options{debug} ) {
+                    Foswiki::Func::writeDebug(
+"$topic->{web}.$topic->{topic} has been stuck in $state state for $stuck days"
+                    );
+                }
                 $controlledTopic->notifyTransition(
                     $tx,
                     template         => 'WorkflowRemindMail',
                     default_template => 'mailworkflowmither',
+                    debug            => $options{debug},
 
                     # %STUCK% is days
-                    STUCK => $stuck / 88640
+                    STUCK => $stuck
                 );
                 last;
             }

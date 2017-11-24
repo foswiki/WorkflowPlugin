@@ -395,7 +395,8 @@ s/\$(allow[a-z]+)/$controlledTopic->expandMacros($workflow->getState($state)->{$
         }
     }
     catch WorkflowException with {
-        $result = shift->debug(1);
+        my $e = shift;
+        $result = $e->debug(1) || $e;
     };
 
     return Foswiki::Func::decodeFormatTokens($result);

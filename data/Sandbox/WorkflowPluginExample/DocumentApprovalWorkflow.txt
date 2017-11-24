@@ -40,12 +40,11 @@ The first table describes the states a topic can be in.
 --++ Transitions
 The second table describes the transitions available from each state.
 
-| *State*        | *Action*       | *Next State*  | *Allowed*      | *Form*       |
-| UNDERREVISION  | needs approval | PLEASEAPPROVE | not(WikiGuest) | ApproveForm  |
-| APPROVED       | revise         | UNDERREVISION | not(LASTUSER_UNDERREVISION),not(WikiGuest) | RevisionForm |
-| PLEASEAPPROVE  | approve        | APPROVED      | QualityGroup   |              |
-| PLEASEAPPROVE  | reject         | UNDERREVISION | QualityGroup   | RevisionForm |
+| *State*        | *Action*       | *Next State*  | *Allowed*      | *Form*       | *Notify* |
+| UNDERREVISION  | needs approval | PLEASEAPPROVE | not(WikiGuest) | ApproveForm  | user@example.com |
+| APPROVED       | revise         | UNDERREVISION | not(WikiGuest),not(WikiGuest) | RevisionForm | |
+| PLEASEAPPROVE  | approve        | APPROVED      | not(WikiGuest) |              | |
+| PLEASEAPPROVE  | reject         | UNDERREVISION | not(WikiGuest) | RevisionForm | |
 
 %META:PREFERENCE{name="WORKFLOWDEBUG" value="1"}%
 %META:PREFERENCE{name="WORKFLOWSET" value="Example setting"}%
-

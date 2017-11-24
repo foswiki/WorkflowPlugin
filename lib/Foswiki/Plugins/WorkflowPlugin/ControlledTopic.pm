@@ -657,6 +657,8 @@ been executed.
    * =%options= can include:
       * =default_template= - required to tell what temaplte to use
       * =template= - alternative to the default_template
+      * =debug= - don't send email, just report what would be done to the Foswiki
+        debug log
       * any number of UPPERCASE tokens that will be expanded in
         the mail template
 
@@ -679,6 +681,8 @@ sub notifyTransition {
 
     # Parse the notify column
     foreach my $who (@persons) {
+        next unless defined $who;
+
         if ( $who =~ /^$Foswiki::regex{emailAddrRegex}$/ ) {
             push( @emails, $who );
         }
@@ -703,14 +707,19 @@ sub notifyTransition {
                     __PACKAGE__ . " cannot find email template '$tw.$tt'" );
             }
         }
-        else {
+        elsif ( defined $who ) {
             if ( $who =~ /^LASTUSER_([A-Z]+)$/ ) {
 
+                # Expand LASTUSER_{State}
                 $who = $this->getLast($1);
                 $who = $who->{author} if $who;
+
+                # Silently ignore failure to resolve this
+                next unless defined $who;
             }
 
             $who =~ s/^.*\.//;    # web name?
+
             my @list = Foswiki::Func::wikinameToEmails($who);
             if ( scalar(@list) ) {
                 push( @emails, @list );
@@ -738,14 +747,27 @@ sub notifyTransition {
         }
     }
 
+    # Make a list of mails to be sent
+
     my @mails;
 
     if ( scalar(@emails) ) {
 
-        my $tmpl = Foswiki::Func::loadTemplate( $options{template} );
-        $tmpl = Foswiki::Func::loadTemplate( $options{default_template} )
+        my $tmpl =
+          Foswiki::Func::loadTemplate( $options{template}, undef, $web );
+        $tmpl =
+          Foswiki::Func::loadTemplate( $options{default_template}, undef, $web )
           unless $tmpl;
-        push( @mails, $this->expandMacros($tmpl) );
+
+        $tmpl = $this->expandMacros($tmpl);
+
+        if ($tmpl) {
+            push( @mails, $tmpl );
+        }
+        else {
+            Foswiki::Func::writeWarning( __PACKAGE__
+                  . "CANNOT SEND EMPTY MAIL is the default template missing?" );
+        }
     }
 
     # See if this workflow has one or more custom email templates defined
@@ -754,15 +776,22 @@ sub notifyTransition {
         foreach my $template (@templates) {
             Foswiki::Func::setPreferencesValue( 'TEMPLATE',
                 "$template->{web}.$template->{topic}" );
+
             push( @mails, $this->expandMacros( $template->{text} ) );
         }
     }
 
     foreach my $mail (@mails) {
-        my $errors = Foswiki::Func::sendEmail( $mail, 3 );
-        if ($errors) {
-            Foswiki::Func::writeWarning(
-                __PACKAGE__ . ' Failed to send transition mails: ' . $errors );
+        if ( $options{debug} ) {
+            Foswiki::Func::writeDebug( __PACKAGE__ . "EMAIL: $mail" );
+        }
+        else {
+            my $errors = Foswiki::Func::sendEmail( $mail, 3 );
+            if ($errors) {
+                Foswiki::Func::writeWarning( __PACKAGE__
+                      . ' Failed to send transition mails: '
+                      . $errors );
+            }
         }
     }
 }

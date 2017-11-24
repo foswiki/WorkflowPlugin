@@ -46,7 +46,7 @@ BEGIN {
 use Foswiki::Plugins::WorkflowPlugin::Mither ();
 
 # Need list of states that need to be notified, and max time in that state
-my @states;        # no states, so nothing to do
+my @states;    # no states, so nothing to do
 my $workflow;
 my @topic;
 my %options;
@@ -55,7 +55,7 @@ my $debug;
 sub parseDuration {
     my $s = shift;
     my $d = 0;
-    
+
     $s =~ s/([0-9]+)y/$d += $1 * 31556925;''/gei;    # tropical year
     $s =~ s/([0-9]+)m/$d += $1 * 2592000; ''/ge;     # 1m = 30 days
     $s =~ s/([0-9]+)w/$d += $1 * 604800;  ''/gei;    # 1w = 7 days
@@ -63,8 +63,8 @@ sub parseDuration {
     $s =~ s/([0-9]+)h/$d += $1 * 3600;    ''/gei;    # 1 hour = 60 mins
     $s =~ s/([0-9]+)M/$d += $1 * 60;      ''/ge;     # note: m != M
     $s =~ s/([0-9]+)S/$d += $1 * 1;       ''/gei;
-    if ($s =~ /^[0-9]+$/) {
-        $d += 86400 * $s
+    if ( $s =~ /^[0-9]+$/ ) {
+        $d += 86400 * $s;
     }
     return $d;
 }
@@ -73,43 +73,48 @@ Getopt::Long::GetOptions(
     'state=s'    => \@states,
     'workflow=s' => \$workflow,
     'topic=s'    => \@topic,
-    'dgetopt'    => \$debug, # DEBUG
+    'debug'      => \$debug,                         # DEBUG
     'help'       => sub {
         Pod::Usage::pod2usage(
             -exitstatus => 0,
             -verbose    => 2,
-            );
+        );
     }
-    );
+);
 
-push(@topic, @ARGV);
+push( @topic, @ARGV );
 
 my $ok = 1;
 
-if ( $workflow ) {
+if ($workflow) {
     $options{workflow} = $workflow;
-} else {
+}
+else {
     print STDERR "No workflow specified, see --help for options\n";
     $ok = 0;
 }
 
 if ( scalar @states ) {
-    %{$options{states}} = map {
-        if (/^(.*)=([0-9ymwdhMs]+)$/) {
-            ( $1 => parseDuration($2) )
-        } else {
+    %{ $options{states} } = map {
+        if (/^(.*)=([0-9ymwdhMs]+)$/)
+        {
+            ( $1 => parseDuration($2) );
+        }
+        else {
             ( $_ => parseDuration('7d') );
         }
     } @states;
-} else {
+}
+else {
     print STDERR "No states specified, see --help for options\n";
     $ok = 0;
 }
 
-if (scalar @topic) {
-    push(@{$options{topic}}, @topic);
-} else {
-    push(@{$options{topic}}, '*.*');
+if ( scalar @topic ) {
+    push( @{ $options{topic} }, @topic );
+}
+else {
+    push( @{ $options{topic} }, '*.*' );
 }
 
 unless ($ok) {
@@ -118,17 +123,16 @@ unless ($ok) {
 
 # Debug
 if ($debug) {
-    require Data::Dumper;
-    print STDERR Data::Dumper->Dump([\%options]);
-} else {
-    # Always run as admin
-    my $session = new Foswiki( $Foswiki::cfg{AdminUserLogin} );
-
-    # Assign SESSION so that Func methods work
-    $Foswiki::Plugins::SESSION = $session;
-
-    Foswiki::Plugins::WorkflowPlugin::Mither::mither(%options);
+    $options{debug} = 1;
 }
+
+# Always run as admin
+my $session = new Foswiki( $Foswiki::cfg{AdminUserLogin} );
+
+# Assign SESSION so that Func methods work
+$Foswiki::Plugins::SESSION = $session;
+
+Foswiki::Plugins::WorkflowPlugin::Mither::mither(%options);
 
 1;
 __END__
@@ -182,6 +186,11 @@ The default is days, but you can specify different time periods using
 trailing 'y', 'm', 'w', 'd', 'h', 'M' and 's', which can be combined.
 For example, C<1y2m1w2d1h3M2s> specifies 1 year (365 days), 2 months
 (60 days), 1 week (7 days) 2 days, 1 hour, 3 minutes and 2 seconds.
+
+=item B<--debug>
+
+Reports what would be done by the command. Report is written to the
+Foswiki debug log (and warning log, if appropriate). No emails are sent.
 
 =item B<--help>
 
