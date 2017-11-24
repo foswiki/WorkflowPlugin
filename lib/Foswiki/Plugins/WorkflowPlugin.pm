@@ -12,8 +12,8 @@ use Foswiki::Sandbox       ();
 
 use Foswiki::Plugins::WorkflowPlugin::WorkflowException;
 
-our $VERSION = '1.17';
-our $RELEASE = '1 Aug 2017';
+our $VERSION = '1.18';
+our $RELEASE = '24 Nov 2017';
 our $SHORTDESCRIPTION =
 'Associate a "state" with a topic and then control the work flow that the topic progresses through as content is added.';
 our $NO_PREFS_IN_TOPIC = 1;
